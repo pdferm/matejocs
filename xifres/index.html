@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Xifres (Xifres i Lletres)</title>
+  <style>
+    :root {
+      --bg: #0f172a; /* fons fosc */
+      --text: #e5e7eb; /* text clar */
+      --muted: #9ca3af; /* text suau */
+      --accent: #22d3ee; /* cian */
+      --accent-2: #a78bfa; /* violeta */
+      --warn: #f59e0b; /* ambre */
+      --danger: #ef4444; /* roig */
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial; background: radial-gradient(1200px 800px at 20% 0%, #1f2937, #0b1022 60%, var(--bg) 100%); color:var(--text); display:grid; place-items:center; padding:24px; }
+    .app { max-width:1040px; width:100%; background:linear-gradient(180deg,#0b1224,#0a1020); border:1px solid #1f2937; border-radius:16px; box-shadow:0 10px 40px #0006; padding:20px; }
+    .title { display:flex; align-items:center; gap:10px; font-weight:800; margin:0 0 8px; }
+    .title .dot { width:12px; height:12px; border-radius:50%; background:conic-gradient(from 180deg,var(--accent),var(--accent-2)); box-shadow:0 0 16px var(--accent); }
+    .subtitle { color:var(--muted); margin:0 0 18px; }
+
+    .controls { display:grid; grid-template-columns: 1fr auto auto; gap:12px; align-items:center; }
+    .left { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+
+    select, button { background:#0b1222; color:var(--text); border:1px solid #2b3448; border-radius:12px; padding:10px 14px; font-size:1rem; cursor:pointer; transition: transform .04s ease, border-color .2s ease, box-shadow .2s ease; }
+    button.primary { background:linear-gradient(180deg,#10324a,#0d2433); }
+    button.secondary { background:linear-gradient(180deg,#2a203f,#1e1830); }
+    button.sm { padding:6px 10px; font-size:.9rem; border-radius:10px; }
+    button:active { transform: translateY(1px); }
+
+    .board { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin:18px 0; }
+    .tile { aspect-ratio:1.2/1; display:grid; place-items:center; border-radius:16px; font-weight:800; font-size:clamp(1rem,4vw,1.8rem); background:linear-gradient(180deg,#0f1a2c,#0b1321); border:1px solid #1e293b; box-shadow: inset 0 -16px 40px #0006, 0 8px 30px #0006; }
+
+    .target-wrap { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:6px; }
+    .target { display:inline-grid; place-items:center; min-width:160px; padding:14px 18px; border-radius:12px; font-weight:900; font-size:clamp(1.2rem,6vw,2.2rem); background:linear-gradient(180deg,#0f2a2a,#0b1f1f); border:1px solid #1f4b4b; letter-spacing:.4px; }
+    .badge { padding:6px 10px; border:1px solid #334155; border-radius:999px; color:var(--muted); }
+
+    /* Temporitzador + interruptor */
+    .timer { display:flex; gap:10px; align-items:center; margin-left:auto; }
+    .time-select { display:flex; gap:8px; align-items:center; }
+    .time-display { font-weight:800; padding:8px 12px; border-radius:10px; border:1px solid #334155; background:#0b1a2a; min-width:96px; text-align:center; transition: opacity .2s ease; }
+    .time-display.warn { border-color: var(--warn); color: var(--warn); }
+    .time-display.danger { border-color: var(--danger); color: var(--danger); }
+
+    .toggle { display:flex; align-items:center; gap:8px; }
+    .toggle input { position:absolute; opacity:0; width:0; height:0; }
+    .slider { position:relative; width:44px; height:24px; background:#1f2937; border:1px solid #334155; border-radius:999px; transition: background .2s, border-color .2s; }
+    .slider::after { content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#9ca3af; transition: transform .2s, background .2s; }
+    .toggle input:checked + .slider { background:#0ea5e9; border-color:#38bdf8; }
+    .toggle input:checked + .slider::after { transform: translateX(20px); background:#fff; }
+
+    .help { color:var(--muted); font-size:.9rem; margin-top:10px; }
+    .footer { margin-top:18px; display:flex; justify-content:space-between; font-size:.85rem; color:var(--muted); }
+
+    @media (max-width: 840px) { .controls { grid-template-columns: 1fr; } .timer { margin-left:0; } }
+    @media (max-width: 640px) { .board { grid-template-columns:repeat(3,1fr); } .target { width:100%; } .target-wrap { flex-direction:column; align-items:stretch; } }
+  </style>
+</head>
+<body>
+  <main class="app" role="application" aria-label="Simulador del joc Xifres">
+    <h1 class="title"><span class="dot" aria-hidden="true"></span> Simulador — Xifres</h1>
+    <p class="subtitle">Prem <strong>Sortejar números</strong> (o afegeix-los d’un en un amb <em>Gran</em>/<em>Menut</em>). Després prem <strong>Traure objectiu</strong> per a generar un número de 3 xifres. Pots activar o desactivar el <strong>temporitzador</strong> amb l’interruptor. Usa <strong>Resoldre</strong> per a obrir la solució en una pestanya nova.</p>
+
+    <section class="controls" aria-label="Controls">
+      <div class="left">
+        <label for="bigCount">Nº de grans (25, 50, 75, 100):</label>
+        <select id="bigCount" aria-label="Nombre de grans">
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+        </select>
+        <button id="drawBtn" class="primary" aria-controls="numbers" aria-live="polite">Sortejar números</button>
+        <button id="addBigBtn" class="sm" title="Afig una xifra gran">Gran ➕</button>
+        <button id="addSmallBtn" class="sm" title="Afig una xifra menuda">Menut ➕</button>
+      </div>
+
+      <div class="timer" aria-label="Temporitzador">
+        <label class="toggle" for="timerToggle">
+          <input type="checkbox" id="timerToggle" checked aria-label="Interruptor del temporitzador" />
+          <span class="slider" aria-hidden="true"></span>
+          <span>Temporitzador</span>
+        </label>
+        <div class="time-select">
+          <label for="timeSel">Temps:</label>
+          <select id="timeSel" aria-label="Duració del temporitzador">
+            <option value="45" selected>45 s</option>
+            <option value="60">60 s</option>
+            <option value="90">90 s</option>
+            <option value="120">120 s</option>
+          </select>
+        </div>
+        <div id="timeDisplay" class="time-display" aria-live="polite">00:45</div>
+      </div>
+
+      <div>
+        <button id="targetBtn" class="secondary" aria-controls="target" aria-live="polite">Traure objectiu</button>
+      </div>
+    </section>
+
+    <section class="board" id="numbers" aria-label="Números sortejats">
+      <div class="tile" aria-live="polite">–</div>
+      <div class="tile" aria-live="polite">–</div>
+      <div class="tile" aria-live="polite">–</div>
+      <div class="tile" aria-live="polite">–</div>
+      <div class="tile" aria-live="polite">–</div>
+      <div class="tile" aria-live="polite">–</div>
+    </section>
+
+    <div class="target-wrap">
+      <div class="target" id="target" aria-label="Objectiu">—</div>
+      <span class="badge" id="rulesHint" title="Regles ràpides">Operacions: + − × ÷ (resultat enter) · Cada número com a màxim una vegada.</span>
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <button id="resetBtn" class="sm" title="Neteja i torna a començar">Netejar</button>
+        <button id="solveBtn" class="sm" title="Obri la millor solució en una pestanya nova">Resoldre</button>
+      </div>
+    </div>
+
+    <p class="help">Decideix primer quants <em>grans</em> vols (0–4). Els <strong>menuts</strong> ixen de l’1 al 10 amb repetició. Amb «Resoldre» s’intenta la solució exacta; si no existeix, es mostra la millor aproximació.</p>
+
+    <div class="footer">
+      <span>Fet amb ❤ des de Carlet.</span>
+      <span>(c) Raquel i Javi, 2025</span>
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      // === Estat i utilitats ===
+      const inicialGrans = [25, 50, 75, 100];
+      const menuts = [1,2,3,4,5,6,7,8,9,10]; // amb repetició
+
+      let bossaGrans = inicialGrans.slice(); // disponibles per a traure sense repetició
+      let tauler = []; // números actuals
+
+      let idCrono = null;
+      let fiTemps = null;
+
+      const fitxes = Array.from(document.querySelectorAll('.tile'));
+      const botoSortejar = document.getElementById('drawBtn');
+      const botoAfegirGran = document.getElementById('addBigBtn');
+      const botoAfegirMenut = document.getElementById('addSmallBtn');
+      const botoNetejar = document.getElementById('resetBtn');
+      const botoObjectiu = document.getElementById('targetBtn');
+      const botoResoldre = document.getElementById('solveBtn');
+      const selectGrans = document.getElementById('bigCount');
+      const objectiuEl = document.getElementById('target');
+      const selectTemps = document.getElementById('timeSel');
+      const visorTemps = document.getElementById('timeDisplay');
+      const toggleTemps = document.getElementById('timerToggle');
+      const timeSelectWrap = document.querySelector('.time-select');
+
+      function aleatoriEnter(min, max) { // [min, max]
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+      function barrejar(arr) {
+        const a = arr.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+      function animar(el) {
+        el.style.transform = 'scale(0.92)';
+        el.style.transition = 'transform 120ms ease';
+        requestAnimationFrame(() => { setTimeout(() => { el.style.transform = 'scale(1)'; }, 10); });
+      }
+      function pinta() {
+        for (let i=0; i<fitxes.length; i++) {
+          const val = tauler[i] ?? '–';
+          fitxes[i].textContent = val;
+          fitxes[i].setAttribute('aria-label', `Número ${i+1}: ${val}`);
+        }
+      }
+      function netejaTauler() {
+        tauler = [];
+        bossaGrans = inicialGrans.slice();
+        pinta();
+      }
+
+      // === Accions de sorteig ===
+      function sortejarNumeros() {
+        const nGrans = Math.min(4, Math.max(0, parseInt(selectGrans.value, 10) || 0));
+        const grans = barrejar(inicialGrans).slice(0, nGrans);
+        // actualitza bossa perquè en afegir un a un no es repetisquen els grans
+        const conjunt = new Set(grans);
+        bossaGrans = inicialGrans.filter(x => !conjunt.has(x));
+        const nMenuts = 6 - nGrans;
+        const men = Array.from({length: nMenuts}, () => menuts[aleatoriEnter(0, menuts.length - 1)]);
+        tauler = [...grans, ...men];
+        pinta();
+        fitxes.forEach(animar);
+      }
+      function afegirGran() {
+        if (tauler.length >= 6) return;
+        if (bossaGrans.length === 0) { alert('Ja no queden grans disponibles.'); return; }
+        const i = aleatoriEnter(0, bossaGrans.length - 1);
+        const n = bossaGrans.splice(i,1)[0];
+        tauler.push(n);
+        pinta();
+        animar(fitxes[tauler.length-1]);
+      }
+      function afegirMenut() {
+        if (tauler.length >= 6) return;
+        const n = menuts[aleatoriEnter(0, menuts.length - 1)];
+        tauler.push(n);
+        pinta();
+        animar(fitxes[tauler.length-1]);
+      }
+
+      // === Objectiu i temporitzador ===
+      function traureObjectiu() {
+        const n = aleatoriEnter(100, 999);
+        objectiuEl.textContent = n;
+        objectiuEl.setAttribute('aria-label', `Objectiu: ${n}`);
+        animar(objectiuEl);
+        if (toggleTemps.checked) iniciaCrono(parseInt(selectTemps.value, 10));
+      }
+
+      function formatTemps(secs) {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      }
+      function mostraTemps(secs) {
+        const s = Math.max(0, secs);
+        visorTemps.textContent = formatTemps(s);
+        visorTemps.classList.toggle('warn', s <= 15 && s > 5);
+        visorTemps.classList.toggle('danger', s <= 5);
+      }
+      function paraCrono() {
+        if (idCrono) { clearInterval(idCrono); idCrono = null; }
+        fiTemps = null;
+      }
+      function iniciaCrono(segons) {
+        paraCrono();
+        const ara = Date.now();
+        fiTemps = ara + segons * 1000;
+        mostraTemps(segons);
+        idCrono = setInterval(() => {
+          const restant = Math.ceil((fiTemps - Date.now()) / 1000);
+          mostraTemps(restant);
+          if (restant <= 0) {
+            paraCrono();
+            mostraTemps(0);
+            alarma();
+            flaixVisor();
+          }
+        }, 250);
+      }
+      function flaixVisor() {
+        const el = visorTemps; let i = 0;
+        const f = setInterval(() => { el.style.filter = (i % 2 === 0) ? 'brightness(2)' : 'brightness(1)'; i++; if (i > 8) { clearInterval(f); el.style.filter='brightness(1)'; } }, 120);
+      }
+      function alarma() {
+        try {
+          const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) throw new Error('AudioContext no disponible');
+          const ctx = new Ctx();
+          const o1 = ctx.createOscillator(); const g1 = ctx.createGain();
+          o1.type = 'sine'; o1.frequency.value = 880; // La5
+          g1.gain.setValueAtTime(0.0001, ctx.currentTime);
+          g1.gain.exponentialRampToValueAtTime(0.4, ctx.currentTime + 0.02);
+          g1.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.0);
+          o1.connect(g1).connect(ctx.destination); o1.start(); o1.stop(ctx.currentTime + 1.05);
+
+          const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+          o2.type = 'triangle'; o2.frequency.value = 660; // Mi5
+          g2.gain.setValueAtTime(0.0001, ctx.currentTime + 0.55);
+          g2.gain.exponentialRampToValueAtTime(0.35, ctx.currentTime + 0.6);
+          g2.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.6);
+          o2.connect(g2).connect(ctx.destination); o2.start(ctx.currentTime + 0.55); o2.stop(ctx.currentTime + 1.65);
+        } catch (e) { console.warn('No s\'ha pogut reproduir l\'alarma:', e); }
+      }
+
+      // Mostrar/ocultar elements del temporitzador segons l'interruptor
+      function actualitzaUIInter() {
+        const on = toggleTemps.checked;
+        selectTemps.disabled = !on;
+        timeSelectWrap.style.opacity = on ? 1 : 0.5;
+        visorTemps.style.opacity = on ? 1 : 0.3;
+        if (!on) { paraCrono(); }
+      }
+
+      // === Solucionador ===
+      function resoldreXifres(numeros, objectiu) {
+        const init = numeros.map(n => ({ val: n, expr: n.toString() }));
+        let millor = { dist: Infinity, val: null, expr: '', passos: [] };
+        const memo = new Map();
+        const clau = arr => arr.map(x => x.val).sort((a,b)=>a-b).join(',');
+        function actualitzaMillor(val, expr, passos) {
+          const d = Math.abs(val - objectiu);
+          if (d < millor.dist || (d === millor.dist && expr.length < millor.expr.length)) {
+            millor = { dist: d, val, expr, passos: passos.slice() };
+          }
+        }
+        function rec(arr, passos) {
+          const k = clau(arr);
+          const prev = memo.get(k);
+          if (prev !== undefined && prev <= millor.dist) {}
+          memo.set(k, millor.dist);
+          if (arr.length === 1) { actualitzaMillor(arr[0].val, arr[0].expr, passos); return; }
+          for (let i=0;i<arr.length;i++) {
+            for (let j=i+1;j<arr.length;j++) {
+              const A = arr[i], B = arr[j];
+              const resta = arr.filter((_,idx)=>idx!==i && idx!==j);
+              const resultats = [];
+              resultats.push({ val: A.val + B.val, expr: `(${A.expr} + ${B.expr})`, op:'+' });
+              resultats.push({ val: A.val * B.val, expr: `(${A.expr} × ${B.expr})`, op:'*' });
+              if (A.val !== B.val) {
+                const r1 = A.val - B.val; if (r1 !== 0) resultats.push({ val: r1, expr: `(${A.expr} − ${B.expr})`, op:'-' });
+                const r2 = B.val - A.val; if (r2 !== 0) resultats.push({ val: r2, expr: `(${B.expr} − ${A.expr})`, op:'-' });
+              }
+              if (B.val !== 0 && A.val % B.val === 0) { resultats.push({ val: A.val / B.val, expr: `(${A.expr} ÷ ${B.expr})`, op:'/' }); }
+              if (A.val !== 0 && B.val % A.val === 0) { resultats.push({ val: B.val / A.val, expr: `(${B.expr} ÷ ${A.expr})`, op:'/' }); }
+              const vistos = new Set();
+              for (const r of resultats) {
+                if (!Number.isFinite(r.val)) continue; if (r.val < 0) continue;
+                const sig = `${r.op}:${r.val}`; if (vistos.has(sig)) continue; vistos.add(sig);
+                const seg = [...resta, { val: r.val, expr: r.expr }];
+                const passos2 = [...passos, `${r.expr} = ${r.val}`];
+                if (r.val === objectiu) { actualitzaMillor(r.val, r.expr, passos2); if (millor.dist === 0) return; }
+                rec(seg, passos2);
+              }
+            }
+          }
+        }
+        rec(init, []);
+        return millor;
+      }
+      function obriFinestraSolucio(numeros, objectiu) {
+        if (!objectiu || isNaN(objectiu)) { alert('Primer genera un objectiu.'); return; }
+        if (numeros.length === 0) { alert('Primer sorteja o afegeix números.'); return; }
+        const { dist, val, expr, passos } = resoldreXifres(numeros, objectiu);
+        const w = window.open('', '_blank');
+        if (!w) { alert('El navegador ha blocat la finestra emergent. Permet les pop-ups per a veure la solució.'); return; }
+        const exacta = dist === 0;
+        const html = `<!DOCTYPE html>
+<html lang="ca"><head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Solució — Xifres</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,\"Helvetica Neue\",Arial;margin:0;background:#0b1020;color:#e5e7eb}
+  .wrap{max-width:820px;margin:24px auto;padding:0 16px}
+  .card{background:linear-gradient(180deg,#0f1a2c,#0b1321);border:1px solid #1e293b;border-radius:14px;box-shadow:0 10px 30px #0006;padding:18px}
+  h1{margin:.2rem 0 1rem 0;font-size:1.6rem}
+  .meta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .badge{padding:6px 10px;border:1px solid #334155;border-radius:999px}
+  ol{line-height:1.6}
+  .target{font-weight:800}
+  .good{color:#34d399}
+  .warn{color:#f59e0b}
+  .num{display:inline-grid;place-items:center;min-width:40px;padding:6px 10px;border-radius:10px;background:#0b1a2a;border:1px solid #1e293b;margin-right:6px}
+</style>
+</head><body>
+<div class=wrap>
+  <div class=card>
+    <h1>Solució — Xifres</h1>
+    <div class=meta>
+      <span class=badge>Números: ${numeros.map(n=>`<span class=num>${n}</span>`).join('')}</span>
+      <span class=badge>Objectiu: <span class=target>${objectiu}</span></span>
+      <span class=badge>${exacta?'<span class=good>Exacta</span>':'<span class=warn>Millor aproximació</span>'} → ${val} (distància ${dist})</span>
+    </div>
+    <ol>${(passos && passos.length? passos.map(s=>`<li>${s}</li>`).join('') : '<li>No s\'han generat passos (usa l\'expressió final).</li>')}</ol>
+    <p><strong>Expressió final:</strong> ${expr || '(no disponible)'}</p>
+  </div>
+</div>
+</body></html>`;
+        w.document.write(html); w.document.close();
+      }
+
+      // === Esdeveniments ===
+      botoSortejar.addEventListener('click', sortejarNumeros);
+      botoAfegirGran.addEventListener('click', afegirGran);
+      botoAfegirMenut.addEventListener('click', afegirMenut);
+      botoNetejar.addEventListener('click', () => { netejaTauler(); objectiuEl.textContent = '—'; paraCrono(); mostraTemps(parseInt(selectTemps.value,10)); });
+      botoObjectiu.addEventListener('click', traureObjectiu);
+      botoResoldre.addEventListener('click', () => {
+        const obj = parseInt(String(objectiuEl.textContent).replace(/[^0-9]/g,''), 10);
+        obriFinestraSolucio(tauler.filter(n=>Number.isFinite(n)), obj);
+      });
+      selectTemps.addEventListener('change', () => { if (toggleTemps.checked) { paraCrono(); mostraTemps(parseInt(selectTemps.value,10)); } else { mostraTemps(parseInt(selectTemps.value,10)); } });
+      toggleTemps.addEventListener('change', actualitzaUIInter);
+
+      // Tecles ràpides
+      document.addEventListener('keydown', (e) => {
+        const k = e.key.toLowerCase();
+        if (k === 'n') sortejarNumeros();
+        if (k === 'g') afegirGran();
+        if (k === 'm') afegirMenut();
+        if (k === 'o') traureObjectiu();
+        if (k === 'r') botoResoldre.click();
+        if (k === 'l') botoNetejar.click();
+      });
+
+      // Arrancada
+      pinta();
+      mostraTemps(parseInt(selectTemps.value,10));
+      actualitzaUIInter();
+    })();
+  </script>
+</body>
+</html>

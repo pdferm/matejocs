@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Laberintos</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #buttonRow {
+      margin-top: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background: #4CAF50;
+      color: white;
+      margin: 0 5px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    canvas {
+      background: #fff;
+      margin-top: 20px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h1>Laberintos</h1>
+  <div id="buttonRow">
+    <button onclick="initMazes()">Generar Nuevos Laberintos</button>
+    <button onclick="showSolutions()">Mostrar Soluciones</button>
+  </div>
+  <canvas id="mazeCanvas" width="1200" height="550"></canvas>
+
+	<footer style="margin-top: 10px; text-align: center; font-size: 14px; color: #555;">
+    (c) Raquel & Javi. 2025
+	</footer>
+
+  <script>
+    const canvas = document.getElementById('mazeCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const rows = 30;
+    const cols = 15;
+    const cellSize = 18;
+
+    // offsets para separar los laberintos más
+    const totalMazeWidth = cols * cellSize * 2;
+    const gap = 450; // hueco extra
+    const offsetX1 = Math.floor((canvas.width - totalMazeWidth - gap)/2);
+    const offsetX2 = offsetX1 + cols * cellSize + gap;
+    const offsetY = 0;
+
+    let maze1 = [];
+    let maze2 = [];
+    let solution1 = [];
+    let solution2 = [];
+
+    class Cell {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.walls = [true, true, true, true];
+        this.visited = false;
+      }
+      draw(offsetX) {
+        const x = offsetX + this.x * cellSize;
+        const y = offsetY + this.y * cellSize;
+
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 2;
+
+        if (this.walls[0]) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + cellSize, y); ctx.stroke(); }
+        if (this.walls[1]) { ctx.beginPath(); ctx.moveTo(x + cellSize, y); ctx.lineTo(x + cellSize, y + cellSize); ctx.stroke(); }
+        if (this.walls[2]) { ctx.beginPath(); ctx.moveTo(x + cellSize, y + cellSize); ctx.lineTo(x, y + cellSize); ctx.stroke(); }
+        if (this.walls[3]) { ctx.beginPath(); ctx.moveTo(x, y + cellSize); ctx.lineTo(x, y); ctx.stroke(); }
+
+        if (this.visited) {
+          ctx.fillStyle = '#ccc';
+          ctx.fillRect(x, y, cellSize, cellSize);
+        }
+      }
+    }
+
+    function index(x, y, gridCols, gridRows) {
+      if (x < 0 || y < 0 || x >= gridCols || y >= gridRows) return -1;
+      return x + y * gridCols;
+    }
+
+    function removeWalls(a, b) {
+      const x = a.x - b.x;
+      const y = a.y - b.y;
+      if (x === 1) { a.walls[3] = false; b.walls[1] = false; }
+      else if (x === -1) { a.walls[1] = false; b.walls[3] = false; }
+      if (y === 1) { a.walls[0] = false; b.walls[2] = false; }
+      else if (y === -1) { a.walls[2] = false; b.walls[0] = false; }
+    }
+
+    function generateMaze(gridCols, gridRows) {
+      const grid = [];
+      const stack = [];
+
+      for (let y = 0; y < gridRows; y++) {
+        for (let x = 0; x < gridCols; x++) {
+          grid.push(new Cell(x, y));
+        }
+      }
+
+      const start = grid[0];
+      start.visited = true;
+      stack.push(start);
+
+      while (stack.length > 0) {
+        const current = stack[stack.length - 1];
+
+        const neighbors = [];
+        const top = grid[index(current.x, current.y - 1, gridCols, gridRows)];
+        const right = grid[index(current.x + 1, current.y, gridCols, gridRows)];
+        const bottom = grid[index(current.x, current.y + 1, gridCols, gridRows)];
+        const left = grid[index(current.x - 1, current.y, gridCols, gridRows)];
+
+        if (top && !top.visited) neighbors.push(top);
+        if (right && !right.visited) neighbors.push(right);
+        if (bottom && !bottom.visited) neighbors.push(bottom);
+        if (left && !left.visited) neighbors.push(left);
+
+        if (neighbors.length > 0) {
+          const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+          next.visited = true;
+          stack.push(next);
+          removeWalls(current, next);
+        } else {
+          stack.pop();
+        }
+      }
+
+      return grid;
+    }
+
+	function drawTopBorder(offsetX, entradaX) {
+	  ctx.strokeStyle = '#222';
+	  ctx.lineWidth = 2;
+	  // desde el borde izquierdo hasta la entrada
+	  ctx.beginPath();
+	  ctx.moveTo(offsetX, 0);
+	  ctx.lineTo(offsetX + entradaX * cellSize, 0);
+	  ctx.stroke();
+	  // desde la derecha de la entrada hasta el final del laberinto
+	  ctx.beginPath();
+	  ctx.moveTo(offsetX + (entradaX + 1) * cellSize, 0);
+	  ctx.lineTo(offsetX + cols * cellSize, 0);
+	  ctx.stroke();
+	}
+
+
+    function drawMaze(grid, offsetX) {
+      grid.forEach(cell => cell.draw(offsetX));
+
+      // Entrada y salida
+      const entrada = grid[index(Math.floor(cols/2), 0, cols, rows)];
+      const salida = grid[index(Math.floor(cols/2), rows - 1, cols, rows)];
+
+      ctx.fillStyle = 'red';
+      ctx.fillRect(offsetX + entrada.x * cellSize + 2, entrada.y * cellSize + 2, cellSize - 4, cellSize - 4);
+      ctx.fillRect(offsetX + salida.x * cellSize + 2, salida.y * cellSize + 2, cellSize - 4, cellSize - 4);
+	  
+	  const entradaX = Math.floor(cols/2);
+	  drawTopBorder(offsetX, entradaX);
+	  
+    }
+
+    function findSolution(grid) {
+      const path = [];
+      const entrada = grid[index(Math.floor(cols/2), 0, cols, rows)];
+      const salida = grid[index(Math.floor(cols/2), rows - 1, cols, rows)];
+
+      const visited = new Set();
+      function dfs(cell) {
+        path.push(cell);
+        if (cell === salida) return true;
+        visited.add(cell);
+        const neighbors = [];
+        const top = grid[index(cell.x, cell.y - 1, cols, rows)];
+        const right = grid[index(cell.x + 1, cell.y, cols, rows)];
+        const bottom = grid[index(cell.x, cell.y + 1, cols, rows)];
+        const left = grid[index(cell.x - 1, cell.y, cols, rows)];
+
+        if (top && !cell.walls[0] && !visited.has(top)) neighbors.push(top);
+        if (right && !cell.walls[1] && !visited.has(right)) neighbors.push(right);
+        if (bottom && !cell.walls[2] && !visited.has(bottom)) neighbors.push(bottom);
+        if (left && !cell.walls[3] && !visited.has(left)) neighbors.push(left);
+
+        for (let n of neighbors) {
+          if (dfs(n)) return true;
+        }
+        path.pop();
+        return false;
+      }
+
+      dfs(entrada);
+      return path;
+    }
+
+    function initMazes() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      maze1 = generateMaze(cols, rows);
+      maze2 = generateMaze(cols, rows);
+      solution1 = [];
+      solution2 = [];
+      drawMaze(maze1, offsetX1);
+      drawMaze(maze2, offsetX2);
+    }
+
+    function showSolutions() {
+      solution1 = findSolution(maze1);
+      solution2 = findSolution(maze2);
+
+      // Dibujar soluciones
+      ctx.fillStyle = 'orange';
+      solution1.forEach(cell => {
+        ctx.fillRect(offsetX1 + cell.x * cellSize + cellSize/4, cell.y * cellSize + cellSize/4, cellSize/2, cellSize/2);
+      });
+      solution2.forEach(cell => {
+        ctx.fillRect(offsetX2 + cell.x * cellSize + cellSize/4, cell.y * cellSize + cellSize/4, cellSize/2, cellSize/2);
+      });
+    }
+
+    initMazes();
+  </script>
+</body>
+</html>

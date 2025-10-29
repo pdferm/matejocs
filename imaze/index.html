@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Laberint interactiu</title>
+  <style>
+    :root {
+      --bg: #0f172a;       /* slate-900 */
+      --panel: #111827;    /* gray-900 */
+      --ink: #e5e7eb;      /* gray-200 */
+      --accent: #38bdf8;   /* sky-400 */
+      --accent-2: #22c55e; /* green-500 */
+      --danger: #ef4444;   /* red-500 */
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 800px at 10% 0%, #111827 0%, var(--bg) 60%);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+    .app {
+      width: min(100%, 860px);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    h1 { font-size: clamp(20px, 3vw, 28px); margin: 0; letter-spacing: .3px; }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      appearance: none; border: 0; border-radius: 14px; padding: 10px 14px; font-weight: 600; cursor: pointer; color: #0b1220;
+      background: linear-gradient(180deg, #c7f9ff 0%, #88e2ff 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 8px 20px rgba(0,0,0,.25);
+    }
+    button.secondary { background: linear-gradient(180deg, #c7ffd0 0%, #7ef5a0 100%); }
+    button:active { transform: translateY(1px); }
+
+    .canvas-wrap {
+      background: var(--panel);
+      border-radius: 0px;
+      padding: 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    }
+    canvas { display: block; width: 100%; height: auto; background: #0b1020; border-radius: 0px; }
+
+    .dpad {
+      margin-top: 0px;
+      display: grid;
+      grid-template-columns: 64px 64px 64px;
+      grid-template-rows: 64px 64px 64px;
+      gap: 6px;
+      place-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+    .dpad .spacer { width: 64px; height: 64px; }
+    .dpad button {
+      width: 64px; height: 64px; border-radius: 16px; font-size: 20px;
+      background: #1f2937; color: var(--ink);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 6px 16px rgba(0,0,0,.35);
+    }
+    .badge { font-size: 14px; opacity:.8 }
+    .footer { text-align:center; font-size: 14px; opacity:.8; margin-top: 2px; }
+     .bottom-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: nowrap; }
+    @media (max-width: 540px){ .bottom-bar { flex-wrap: wrap; gap: 8px; } .info { text-align: left; } }
+    .info { text-align: right; }
+    .info .footer { margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>🌀 Laberint interactiu</h1>
+      <div class="controls">
+        <button id="btn-new" title="Generar un nuevo laberinto">Nova partida</button>
+        <button id="btn-solve" class="secondary" title="Mostrar/Ocultar solución">Solució</button>
+        <button id="btn-trail" title="Mostrar un rastro al andar">Rastre: OFF</button>
+      </div>
+    </header>
+
+    <div class="canvas-wrap">
+      <canvas id="maze" width="900" height="600"></canvas>
+    </div>
+
+    <div class="bottom-bar">
+      <div class="dpad" aria-label="Controles táctiles">
+        <span class="spacer"></span>
+        <button id="up" aria-label="Arriba">↑</button>
+        <span class="spacer"></span>
+        <button id="left" aria-label="Izquierda">←</button>
+        <button id="down" aria-label="Abajo">↓</button>
+        <button id="right" aria-label="Derecha">→</button>
+      </div>
+
+      <div class="info" aria-label="Instrucciones y créditos">
+        <div class="footer badge">Pots moure't amb les fletxes del teclat o els controls tàctils.</div>
+        <div class="footer">(c) Raquel & Javi · 2025</div>
+      </div>
+  </div>
+
+  <script>
+    // ====== Parámetros del laberinto
+    const rows = 23;      // filas (ligeramente menor)
+    const cols = 33;      // columnas (ligeramente menor)
+    const cellSize = 18;  // tamaño de celda en px al dibujar (más compacto)
+
+    const canvas = document.getElementById('maze');
+    const ctx = canvas.getContext('2d');
+
+    // Escalado responsivo simple
+    function dpr() { return window.devicePixelRatio || 1; }
+
+    function resizeCanvas() {
+      // Render nítido (DPR) y escalado visual por CSS sin recortar
+      const scale = window.devicePixelRatio || 1;
+      const logicalW = cols * cellSize + 2; // +2 por contorno
+      const logicalH = rows * cellSize + 2;
+
+      // Bitmap real del canvas (solo DPR)
+      canvas.width  = Math.floor(logicalW * scale);
+      canvas.height = Math.floor(logicalH * scale);
+
+      // Tamaño visual fluido: el navegador lo escala sin cambiar coordenadas lógicas
+      const wrap = document.querySelector('.canvas-wrap');
+      const cssW = Math.min(820, wrap.clientWidth - 16);
+      canvas.style.width  = cssW + 'px';
+      canvas.style.height = 'auto';
+
+      // Sistema de coordenadas lógico con nitidez retina
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      ctx.translate(1, 1);
+
+      redraw();
+}
+
+    window.addEventListener('resize', resizeCanvas);
+
+    // ====== Representación del grid
+    class Cell {
+      constructor(x, y) {
+        this.x = x; this.y = y;
+        // top, right, bottom, left
+        this.walls = [true, true, true, true];
+        this.visited = false;
+      }
+    }
+
+    let grid = [], startCell = null, endCell = null, player = null, showSolution = false, solutionPath = [];
+    let trailOn = false; // opción de rastro en vivo
+    let trail = [];      // celdas recorridas cuando el rastro está activo
+
+    function idx(x,y){ return x + y * cols; }
+
+    // Generación por backtracking en profundidad
+    function generateMaze() {
+      grid = Array.from({length: rows*cols}, (_,i)=> new Cell(i % cols, Math.floor(i/cols)));
+      const stack = [];
+      const first = grid[0];
+      first.visited = true; stack.push(first);
+
+      while(stack.length){
+        const current = stack[stack.length-1];
+        const neighbors = [];
+        const {x,y} = current;
+        const top = y>0 ? grid[idx(x,y-1)] : null;
+        const right = x<cols-1 ? grid[idx(x+1,y)] : null;
+        const bottom = y<rows-1 ? grid[idx(x,y+1)] : null;
+        const left = x>0 ? grid[idx(x-1,y)] : null;
+        if (top && !top.visited) neighbors.push(top);
+        if (right && !right.visited) neighbors.push(right);
+        if (bottom && !bottom.visited) neighbors.push(bottom);
+        if (left && !left.visited) neighbors.push(left);
+        if (neighbors.length){
+          const next = neighbors[Math.floor(Math.random()*neighbors.length)];
+          next.visited = true; stack.push(next);
+          if (next.x === current.x && next.y === current.y-1){ current.walls[0]=false; next.walls[2]=false; }
+          if (next.x === current.x+1 && next.y === current.y){ current.walls[1]=false; next.walls[3]=false; }
+          if (next.x === current.x && next.y === current.y+1){ current.walls[2]=false; next.walls[0]=false; }
+          if (next.x === current.x-1 && next.y === current.y){ current.walls[3]=false; next.walls[1]=false; }
+        } else {
+          stack.pop();
+        }
+      }
+
+      const entryX = Math.floor(Math.random()*cols);
+      const exitX  = Math.floor(Math.random()*cols);
+      startCell = grid[idx(entryX, 0)];
+      endCell   = grid[idx(exitX, rows-1)];
+      startCell.walls[0] = false; // abrir hueco superior
+      endCell.walls[2] = false;   // abrir hueco inferior
+
+      player = { x: startCell.x, y: startCell.y };
+
+      solutionPath = solve(startCell, endCell);
+
+      // reset de rastro
+      trail = [];
+    }
+
+    // Resolver con DFS para obtener un camino (no necesariamente el único)
+    function solve(a,b){
+      const visited = new Set();
+      const prev = new Map();
+      const stack = [a]; visited.add(a);
+      while(stack.length){
+        const c = stack.pop();
+        if (c===b) break;
+        const nbs = neighborsByWalls(c);
+        for(const n of nbs){
+          if(!visited.has(n)){ visited.add(n); prev.set(n,c); stack.push(n); }
+        }
+      }
+      // reconstruir
+      const path = []; let cur=b; if(!prev.has(b) && a!==b) return path;
+      while(cur && cur!==a){ path.push(cur); cur = prev.get(cur); }
+      path.push(a); path.reverse();
+      return path;
+    }
+
+    function neighborsByWalls(c){
+      const arr = [];
+      const {x,y,walls} = c;
+      if(!walls[0] && y>0) arr.push(grid[idx(x,y-1)]);
+      if(!walls[1] && x<cols-1) arr.push(grid[idx(x+1,y)]);
+      if(!walls[2] && y<rows-1) arr.push(grid[idx(x,y+1)]);
+      if(!walls[3] && x>0) arr.push(grid[idx(x-1,y)]);
+      return arr;
+    }
+
+    // ====== Dibujo
+    function drawGrid() {
+      // Limpiar con margen por el contorno
+      ctx.clearRect(-2, -2, cols * cellSize + 4, rows * cellSize + 4);
+
+      ctx.lineWidth = 2; ctx.strokeStyle = '#a3b6ff11';
+      // Fondo cuadriculado sutil
+      for(let y=0;y<=rows;y++){
+        ctx.beginPath(); ctx.moveTo(0, y*cellSize); ctx.lineTo(cols*cellSize, y*cellSize); ctx.stroke();
+      }
+      for(let x=0;x<=cols;x++){
+        ctx.beginPath(); ctx.moveTo(x*cellSize, 0); ctx.lineTo(x*cellSize, rows*cellSize); ctx.stroke();
+      }
+
+      // Paredes
+      ctx.strokeStyle = '#9fb3ff';
+      ctx.lineWidth = 3;
+      for(const c of grid){
+        const x = c.x * cellSize; const y = c.y * cellSize;
+        if(c.walls[0]){ ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+cellSize, y); ctx.stroke(); }
+        if(c.walls[1]){ ctx.beginPath(); ctx.moveTo(x+cellSize, y); ctx.lineTo(x+cellSize, y+cellSize); ctx.stroke(); }
+        if(c.walls[2]){ ctx.beginPath(); ctx.moveTo(x+cellSize, y+cellSize); ctx.lineTo(x, y+cellSize); ctx.stroke(); }
+        if(c.walls[3]){ ctx.beginPath(); ctx.moveTo(x, y+cellSize); ctx.lineTo(x, y); ctx.stroke(); }
+      }
+
+      // Contorno exterior (con huecos en entrada/salida)
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      // arriba
+      ctx.beginPath();
+      const gapTopX = startCell.x; // hueco de entrada
+      ctx.moveTo(0,0);
+      ctx.lineTo(gapTopX*cellSize, 0);
+      ctx.moveTo((gapTopX+1)*cellSize, 0);
+      ctx.lineTo(cols*cellSize, 0);
+      ctx.stroke();
+      // abajo
+      ctx.beginPath();
+      const gapBotX = endCell.x;
+      ctx.moveTo(0, rows*cellSize);
+      ctx.lineTo(gapBotX*cellSize, rows*cellSize);
+      ctx.moveTo((gapBotX+1)*cellSize, rows*cellSize);
+      ctx.lineTo(cols*cellSize, rows*cellSize);
+      ctx.stroke();
+      // laterales completos
+      ctx.beginPath();
+      ctx.moveTo(0,0); ctx.lineTo(0, rows*cellSize); // izquierda
+      ctx.moveTo(cols*cellSize,0); ctx.lineTo(cols*cellSize, rows*cellSize); // derecha
+      ctx.stroke();
+
+      // Rastro del jugador (opcional)
+      if(trailOn && trail.length > 1){
+        ctx.strokeStyle = '#93c5fd'; // azul claro
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(trail[0].x*cellSize + cellSize/2, trail[0].y*cellSize + cellSize/2);
+        for(let i=1;i<trail.length;i++){
+          ctx.lineTo(trail[i].x*cellSize + cellSize/2, trail[i].y*cellSize + cellSize/2);
+        }
+        ctx.stroke();
+      }
+
+      // Solución (opcional)
+      if(showSolution && solutionPath.length){
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(startCell.x*cellSize + cellSize/2, startCell.y*cellSize + cellSize/2);
+        for(const c of solutionPath){
+          ctx.lineTo(c.x*cellSize + cellSize/2, c.y*cellSize + cellSize/2);
+        }
+        ctx.stroke();
+      }
+
+      // Jugador
+      drawPlayer();
+
+      // Etiquetas de entrada/salida
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '12px system-ui';
+      ctx.fillText('', startCell.x*cellSize + 4, Math.max(12, startCell.y*cellSize - 6));
+      ctx.fillText('', endCell.x*cellSize + 4, Math.min(rows*cellSize - 4, endCell.y*cellSize + 18));
+    }
+
+    function drawPlayer(){
+      const px = player.x * cellSize + cellSize/2;
+      const py = player.y * cellSize + cellSize/2;
+      const r = cellSize*0.35;
+      // halo
+      ctx.beginPath(); ctx.arc(px, py, r+4, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(56,189,248,.15)'; ctx.fill();
+      // ficha
+      ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI*2);
+      ctx.fillStyle = '#38bdf8'; ctx.fill();
+      // brillo
+      ctx.beginPath(); ctx.arc(px-4, py-4, r*0.45, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fill();
+    }
+
+    function redraw(){
+      if(grid.length && startCell && endCell){
+        try { drawGrid(); } catch(e){ console.error(e); }
+      }
+    }
+
+    // ====== Movimiento
+    function canMove(dir){
+      const c = grid[idx(player.x, player.y)];
+      if(dir==='up')    return !c.walls[0];
+      if(dir==='right') return !c.walls[1];
+      if(dir==='down')  return !c.walls[2];
+      if(dir==='left')  return !c.walls[3];
+      return false;
+    }
+
+    function move(dir){
+      if(!grid.length) return;
+      const before = { x: player.x, y: player.y };
+      if(canMove(dir)){
+        if(dir==='up') player.y -= 1;
+        if(dir==='right') player.x += 1;
+        if(dir==='down') player.y += 1;
+        if(dir==='left') player.x -= 1;
+
+        // Actualizar rastro (push o pop si deshacemos)
+        if (trailOn) {
+          // Inicializa el rastro anclado al punto de partida si está vacío
+          if (trail.length === 0) {
+            trail.push({ x: before.x, y: before.y });
+          }
+          const last = trail[trail.length - 1];
+          const prev = trail.length > 1 ? trail[trail.length - 2] : null;
+          const now  = { x: player.x, y: player.y };
+          const same = (a, b) => a && b && a.x === b.x && a.y === b.y;
+
+          // Si veníamos de 'before' (last) y ahora estamos en 'prev', es un retroceso: borra el último segmento
+          if (prev && same(last, before) && same(prev, now)) {
+            trail.pop();
+          } else if (!same(last, now)) {
+            // Avance normal o retroceso más largo: añadimos el nuevo punto
+            trail.push(now);
+          }
+        }
+
+        redraw();
+        checkWin(dir);
+      }
+    }
+
+    function checkWin(lastDir){
+      // Ganas al entrar en la celda de salida o salir por el hueco inferior de esa celda
+      const atExitCell = (player.x===endCell.x && player.y===endCell.y);
+      if(atExitCell){ toast('🎉 ¡Has llegado a la salida!'); }
+      // Si estás en la última fila y te mueves "down" a través del hueco, también ganas
+      const atBottomBorder = (player.y===rows-1 && lastDir==='down' && !grid[idx(player.x, player.y)].walls[2]);
+      if(atBottomBorder){ toast('🎉 ¡Has salido del laberinto!'); }
+    }
+
+    // Mini toast
+    let toastTimer=null;
+    function toast(msg){
+      clearTimeout(toastTimer);
+      const el = document.createElement('div');
+      el.textContent = msg;
+      Object.assign(el.style,{
+        position:'fixed', left:'50%', top:'16px', transform:'translateX(-50%)',
+        background:'#111827', color:'#e5e7eb', padding:'10px 14px', borderRadius:'12px',
+        boxShadow:'0 10px 30px rgba(0,0,0,.35)', zIndex:50, fontWeight:700
+      });
+      document.body.appendChild(el);
+      toastTimer=setTimeout(()=>{ el.remove(); }, 1800);
+    }
+
+    // ====== Entradas (teclado + táctil)
+    window.addEventListener('keydown', (e)=>{
+      const k = e.key;
+      if(['ArrowUp','ArrowRight','ArrowDown','ArrowLeft','w','d','s','a'].includes(k)){
+        e.preventDefault();
+        if(k==='ArrowUp'||k==='w') move('up');
+        if(k==='ArrowRight'||k==='d') move('right');
+        if(k==='ArrowDown'||k==='s') move('down');
+        if(k==='ArrowLeft'||k==='a') move('left');
+      }
+      if(k==='r') newGame();
+    });
+
+    // Botones táctiles
+    const bindHold = (el, dir)=>{
+      let pressTimer=null;
+      const start=()=>{ move(dir); pressTimer=setInterval(()=>move(dir), 160); };
+      const end=()=>{ clearInterval(pressTimer); };
+      el.addEventListener('mousedown', start);
+      el.addEventListener('touchstart', (e)=>{ e.preventDefault(); start(); }, { passive: false });
+      window.addEventListener('mouseup', end);
+      window.addEventListener('touchend', end);
+      el.addEventListener('mouseleave', end);
+    };
+    bindHold(document.getElementById('up'),'up');
+    bindHold(document.getElementById('right'),'right');
+    bindHold(document.getElementById('down'),'down');
+    bindHold(document.getElementById('left'),'left');
+
+    // Botones superiores
+    document.getElementById('btn-new').addEventListener('click', newGame);
+    document.getElementById('btn-solve').addEventListener('click', ()=>{ showSolution=!showSolution; redraw(); });
+    document.getElementById('btn-trail').addEventListener('click', ()=>{
+      trailOn = !trailOn;
+      const btn = document.getElementById('btn-trail');
+      btn.textContent = 'Rastro: ' + (trailOn ? 'ON' : 'OFF');
+      if(!trailOn){ trail = []; } else { trail = [{x: player.x, y: player.y}]; }
+      redraw();
+    });
+
+    function newGame(){ generateMaze(); redraw(); runTests(); }
+
+    // ====== Tests mínimos (se ejecutan al iniciar y al crear nueva partida)
+    function runTests(){
+      try {
+        console.groupCollapsed('%c[Tests] Laberinto', 'color:#93c5fd');
+        console.assert(grid.length === rows*cols, 'El grid debe tener rows*cols celdas');
+        console.assert(startCell && endCell, 'startCell y endCell deben existir');
+        console.assert(startCell && startCell.walls[0] === false, 'Entrada (arriba) debe tener hueco');
+        console.assert(endCell && endCell.walls[2] === false, 'Salida (abajo) debe tener hueco');
+        console.assert(Array.isArray(solutionPath), 'solutionPath es un array');
+        console.assert(solutionPath.length > 0, 'Debe existir al menos un camino solución');
+        console.groupEnd();
+      } catch (err){ console.error('Fallo en tests:', err); }
+    }
+
+    // Iniciar
+    generateMaze();
+    resizeCanvas();
+    runTests();
+  </script>
+</body>
+</html>

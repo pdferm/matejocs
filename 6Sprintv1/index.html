@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>6 al Sprint</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --panel:#fff; --text:#172033; --muted:#6d7687; --line:#dfe5ef;
+    --accent:#3157d5; --accent2:#2442ac; --ok:#159447; --warn:#e5a51d; --bad:#d33a3a;
+    --shadow:0 18px 50px rgba(31,48,85,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  body{min-height:100dvh;display:flex;justify-content:center;align-items:center;padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+  button,input{font:inherit}
+  .app{width:min(1180px,100%);min-height:min(780px,calc(100dvh - 28px));background:var(--panel);border:1px solid rgba(20,40,80,.08);border-radius:30px;box-shadow:var(--shadow);overflow:hidden}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 26px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:13px}
+  .logo{width:46px;height:46px;border-radius:14px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:950;font-size:20px}
+  h1{margin:0;font-size:clamp(22px,2.6vw,32px);line-height:1}
+  .sub{font-size:13px;color:var(--muted);margin-top:5px}
+  .topstats{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  .pill{border:1px solid var(--line);border-radius:999px;padding:9px 13px;font-weight:850;font-size:14px;background:#fff}
+  .pill span{color:var(--accent)}
+  main{min-height:680px;display:grid;place-items:center;padding:clamp(18px,4vw,46px)}
+  .screen{width:min(860px,100%)}
+  .screen:not(.active){display:none!important}
+  .app.menu-mode{min-height:0}
+  .app.menu-mode main{min-height:0;padding-bottom:24px}
+  .screen.active{display:block}
+  .screen.game.active{display:grid}
+  .intro{text-align:center}
+  .intro h2{font-size:clamp(36px,6vw,68px);margin:0 0 12px;line-height:.95}
+  .intro p{margin:0 auto 24px;max-width:700px;color:var(--muted);font-size:clamp(16px,2vw,20px);line-height:1.55}
+  .instructions{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:26px 0}
+  .instruction{border:1px solid var(--line);border-radius:20px;padding:18px;background:#fbfcff;text-align:left}
+  .instruction strong{display:block;margin-bottom:5px}
+  .instruction span{font-size:13px;color:var(--muted);line-height:1.4}
+  .difficulty-wrap{margin:28px 0 20px}
+  .difficulty-title{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:900;margin-bottom:13px}
+  .difficulty{display:flex;justify-content:center;gap:22px}
+  .level-dot{width:48px;height:48px;border-radius:50%;border:5px solid transparent;cursor:pointer;box-shadow:0 0 0 2px var(--line);transition:.15s;position:relative}
+  .level-dot:hover{transform:scale(1.05)}
+  .level-dot.active{box-shadow:0 0 0 4px #172033}
+  .level-dot.green{background:#3fbd68}
+  .level-dot.yellow{background:#f2c344}
+  .level-dot.red{background:#e85656}
+  .level-dot::after{display:none}
+  .cta{border:0;border-radius:18px;padding:16px 26px;background:var(--accent);color:white;font-weight:950;font-size:18px;cursor:pointer;min-width:220px;box-shadow:0 10px 24px rgba(49,87,213,.23)}
+  .cta:hover{background:var(--accent2)}
+  .cta:active{transform:translateY(1px)}
+  .game{display:grid;gap:18px}
+  .gamebar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}
+  .timer{font-size:clamp(24px,3.2vw,38px);font-weight:950;font-variant-numeric:tabular-nums}
+  .level-mini{display:flex;align-items:center;justify-content:center;gap:8px;font-weight:850;color:var(--muted);font-size:13px}
+  .mini-dot{width:16px;height:16px;border-radius:50%}
+  .fails{text-align:right;font-weight:850}.fails span{color:var(--bad)}
+  .progress{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .step{height:9px;border-radius:999px;background:#e8edf5;overflow:hidden}
+  .step.done{background:var(--ok)}
+  .step.active{background:var(--accent)}
+  .equation-card{border:1px solid var(--line);border-radius:28px;padding:clamp(28px,5vw,58px) 20px;text-align:center;background:#fff;box-shadow:0 12px 35px rgba(28,44,78,.07)}
+  .step-title{font-size:12px;color:var(--muted);font-weight:900;letter-spacing:.1em;margin-bottom:15px}
+  .equation{font-size:clamp(56px,9vw,108px);font-weight:950;letter-spacing:-.045em;line-height:.95;font-variant-numeric:tabular-nums}
+  .answers{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .answer{min-height:88px;border:2px solid var(--line);border-radius:20px;background:#fff;font-size:clamp(28px,4vw,42px);font-weight:950;cursor:pointer;transition:.12s;touch-action:manipulation}
+  .answer:hover{border-color:#b7c3de;transform:translateY(-1px)}
+  .answer.correct{background:#eaf8ef;border-color:var(--ok);color:#0d7d38}
+  .answer.wrong{background:#fff0f0;border-color:var(--bad);color:var(--bad);animation:shake .2s linear}
+  .penalty{min-height:26px;text-align:center;color:var(--bad);font-weight:950;opacity:0;transition:.18s}
+  .penalty.show{opacity:1}
+  @keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+  .result{text-align:center}
+  .result h2{font-size:clamp(34px,5vw,56px);margin:0 0 8px}
+  .score{font-size:clamp(50px,8vw,88px);font-weight:950;color:var(--accent);margin:18px 0}
+  .resultgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}
+  .stat{border:1px solid var(--line);border-radius:18px;padding:15px;background:#fbfcff}
+  .stat strong{display:block;font-size:24px}.stat span{font-size:12px;color:var(--muted);font-weight:850}
+  .recordline{min-height:25px;color:var(--ok);font-weight:950;margin-bottom:16px}
+  .actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+  .secondary{border:1px solid var(--line);border-radius:18px;padding:15px 22px;background:#fff;font-weight:900;cursor:pointer}
+  .modal{position:fixed;inset:0;background:rgba(18,26,44,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:20}
+  .modal.show{display:flex}
+  .modal-card{width:min(430px,100%);background:#fff;border-radius:24px;padding:26px;box-shadow:0 20px 60px rgba(0,0,0,.22);text-align:center}
+  .modal-card h3{margin:0 0 8px;font-size:28px}.modal-card p{color:var(--muted);margin:0 0 18px;line-height:1.45}
+  .modal-card input{width:100%;border:2px solid var(--line);border-radius:15px;padding:14px 15px;font-size:18px;outline:none;margin-bottom:12px}
+  .modal-card input:focus{border-color:var(--accent)}
+  .records{margin-top:22px;border-top:1px solid var(--line);padding-top:18px}
+  .records h3{margin:0 0 10px;font-size:16px}
+  .record-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:700px;margin:0 auto}
+  .record-item{display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);border-radius:14px;padding:11px 10px;font-size:14px;min-width:0}
+  .record-dot{width:14px;height:14px;border-radius:50%;flex:0 0 auto}
+  .record-item strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px}
+  .record-item span{color:var(--accent);font-weight:900;white-space:nowrap}
+  @media(max-width:760px){
+    body{padding:0;background:#fff}.app{min-height:100dvh;border:0;border-radius:0;box-shadow:none}
+    .app.menu-mode{min-height:0}
+    .app.menu-mode main{min-height:0;padding-bottom:18px}
+    header{padding:13px 15px}.sub{display:none}.topstats .pill:first-child{display:none}
+    main{min-height:calc(100dvh - 72px);padding:20px 14px 28px}
+    .instructions{grid-template-columns:1fr;gap:8px}.instruction{padding:13px 15px}
+    .difficulty{gap:28px;margin-bottom:20px}
+    .level-dot::after{display:none}
+    .gamebar{grid-template-columns:1fr 1fr}.level-mini{grid-column:1/-1;grid-row:1;justify-self:center}.timer{grid-row:2}.fails{grid-row:2}
+    .answers{grid-template-columns:repeat(2,1fr);gap:9px}.answer{min-height:72px;border-radius:16px}
+    .equation-card{padding:30px 12px;border-radius:22px}
+    .resultgrid{grid-template-columns:1fr 1fr}.resultgrid .stat:last-child{grid-column:1/-1}.record-list{grid-template-columns:repeat(3,1fr);gap:6px}.record-item{padding:9px 5px;font-size:12px}.record-item strong{max-width:74px}
+  }
+  @media(max-height:700px) and (min-width:761px){
+    main{min-height:600px;padding:18px 34px}.game{gap:12px}.equation-card{padding:25px 18px}.answer{min-height:66px}
+  }
+  .footer{
+  position:fixed;
+  left:0;
+  bottom:8px;
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 14px;
+  font-size:11px;
+  color:#8a93a3;
+  pointer-events:none;
+  z-index:100;
+  }
+</style>
+</head>
+<body>
+<div class="app menu-mode" id="app">
+  <header>
+    <div class="brand">
+      <div class="logo">6×</div>
+      <div><h1>6 al Sprint</h1><div class="sub">Sis operacions encadenades contra el rellotge</div></div>
+    </div>
+    <div class="topstats">
+      <div class="pill">Rècord: <span id="bestTop">—</span></div>
+      <div class="pill">Errades: <span id="errorsTop">0</span></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="screen intro active" id="startScreen">
+      <h2>6 al Sprint</h2>
+      <p>Resol sis operacions encadenades. Cada resultat es converteix en el número de partida de la següent operació.</p>
+
+      <div class="instructions">
+        <div class="instruction"><strong>6 operacions</strong><span>Completa toda la cadena el més ràpid possible.</span></div>
+        <div class="instruction"><strong>6 respostes</strong><span>En cada pas sols una opció és correcta.</span></div>
+        <div class="instruction"><strong>+3 segons</strong><span>Cada resposta incorrecta afegeix una penalització.</span></div>
+      </div>
+
+      <div class="difficulty-wrap">
+        <div class="difficulty-title">Elegeix dificultat</div>
+        <div class="difficulty" role="radiogroup" aria-label="Dificultad">
+          <button class="level-dot green" data-level="initial" aria-label="Nivell inicial"></button>
+          <button class="level-dot yellow active" data-level="medium" aria-label="Nivell mitjà"></button>
+          <button class="level-dot red" data-level="advanced" aria-label="Nivell avançat"></button>
+        </div>
+      </div>
+
+      <button class="cta" id="startBtn">Començar sprint</button>
+
+      <div class="records">
+        <h3>Rècords</h3>
+        <div class="record-list" id="recordList"></div>
+      </div>
+    </section>
+
+    <section class="screen game" id="playScreen">
+      <div class="gamebar">
+        <div class="timer" id="timer">0,0 s</div>
+        <div class="level-mini"><span class="mini-dot" id="miniDot"></span><span id="levelName">Mitjà</span></div>
+        <div class="fails">Errades: <span id="fails">0</span></div>
+      </div>
+      <div class="progress" id="progress"></div>
+      <div class="equation-card">
+        <div class="step-title" id="stepTitle">OPERACIÓ 1 DE 6</div>
+        <div class="equation" id="equation"></div>
+      </div>
+      <div class="answers" id="answers"></div>
+      <div class="penalty" id="penalty">+3 segons</div>
+    </section>
+
+    <section class="screen result" id="resultScreen">
+      <h2>Sprint completat</h2>
+      <div class="score" id="finalScore">0,0 s</div>
+      <div class="recordline" id="recordLine"></div>
+      <div class="resultgrid">
+        <div class="stat"><strong id="realTime">0,0 s</strong><span>TEMPS REAL</span></div>
+        <div class="stat"><strong id="errorCount">0</strong><span>ERRADES</span></div>
+        <div class="stat"><strong id="penaltyTime">+0 s</strong><span>PENALITZACIÓ</span></div>
+      </div>
+      <div class="actions">
+        <button class="cta" id="againBtn">Altra partida</button>
+        <button class="secondary" id="homeBtn">Inici</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="recordModal" role="dialog" aria-modal="true" aria-labelledby="recordTitle">
+  <div class="modal-card">
+    <h3 id="recordTitle">🏆 ¡Nou rècord!</h3>
+    <p id="recordText">Has aconseguit el millor temps d'este nivell. Escriu el teu nom per guardar-la en este navegador.</p>
+    <input id="playerName" maxlength="24" autocomplete="name" placeholder="El teu nom">
+    <button class="cta" id="saveRecordBtn">Guardar rècord</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const TOTAL = 6;
+  const PENALTY = 3;
+  const STORAGE_KEY = "6alSprint.records.v1";
+
+  const levels = {
+    initial:  {name:"Inicial", color:"#3fbd68"},
+    medium:   {name:"Mitjà", color:"#f2c344"},
+    advanced: {name:"Avançat", color:"#e85656"}
+  };
+
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+  const startScreen=$("#startScreen"), playScreen=$("#playScreen"), resultScreen=$("#resultScreen");
+  const timerEl=$("#timer"), answersEl=$("#answers"), equationEl=$("#equation"), progressEl=$("#progress");
+  const penaltyEl=$("#penalty"), failsEl=$("#fails"), errorsTopEl=$("#errorsTop"), bestTopEl=$("#bestTop");
+
+  let selectedLevel="medium";
+  let state=null, raf=null, pendingRecord=null;
+
+  const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+  const choice=a=>a[Math.floor(Math.random()*a.length)];
+  const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+  const fmt=n=>n.toFixed(1).replace(".",",")+" s";
+
+  function getRecords(){
+    try{
+      const obj=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
+      return obj && typeof obj==="object" ? obj : {};
+    }catch{return {}}
+  }
+  function setRecords(r){localStorage.setItem(STORAGE_KEY,JSON.stringify(r))}
+  function bestFor(level){
+    const r=getRecords()[level];
+    return r && Number.isFinite(r.time) ? r : null;
+  }
+
+  function renderRecords(){
+    const records=getRecords();
+    const list=$("#recordList");
+    list.innerHTML="";
+    ["initial","medium","advanced"].forEach(level=>{
+      const r=records[level];
+      const row=document.createElement("div");
+      row.className="record-item";
+      row.innerHTML = r
+        ? `<span class="record-dot" style="background:${levels[level].color}"></span><strong>${escapeHtml(r.name)}</strong><span>${fmt(r.time)}</span>`
+        : `<span class="record-dot" style="background:${levels[level].color}"></span><span>—</span>`;
+      list.appendChild(row);
+    });
+    const best=bestFor(selectedLevel);
+    bestTopEl.textContent=best?fmt(best.time):"—";
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function show(screen){
+    [startScreen,playScreen,resultScreen].forEach(s=>s.classList.remove("active"));
+    screen.classList.add("active");
+    $("#app").classList.toggle("menu-mode", screen===startScreen);
+  }
+
+  function setLevel(level){
+    selectedLevel=level;
+    $$(".level-dot").forEach(b=>b.classList.toggle("active",b.dataset.level===level));
+    renderRecords();
+  }
+
+  $$(".level-dot").forEach(b=>b.addEventListener("click",()=>setLevel(b.dataset.level)));
+
+  function makePlan(level){
+    // Medium/advanced: at least one +, -, × and ÷. Initial has no division,
+    // so it guarantees +, -, × plus three extra operations.
+    const required = level==="initial" ? ["+","-","*"] : ["+","-","*","/"];
+    const allowed  = level==="initial" ? ["+","-","*"] : ["+","-","*","/"];
+    while(required.length<TOTAL) required.push(choice(allowed));
+    return shuffle(required);
+  }
+
+  function initialStart(){
+    if(selectedLevel==="initial") return rand(3,12);
+    if(selectedLevel==="medium") return rand(4,20);
+    return rand(8,35);
+  }
+
+  function makeOperation(current, type, level){
+    if(type==="+"){
+      if(level==="initial"){
+        const b=rand(1,10); return {a:current,b,sign:"+",type,result:current+b};
+      }
+      if(level==="medium"){
+        const b=rand(5,30); return {a:current,b,sign:"+",type,result:current+b};
+      }
+      const b=rand(18,75); return {a:current,b,sign:"+",type,result:current+b};
+    }
+
+    if(type==="-"){
+      if(current<=1) return null;
+      if(level==="initial"){
+        const max=Math.min(10,current);
+        if(max<1)return null;
+        const b=rand(1,max); return {a:current,b,sign:"−",type,result:current-b};
+      }
+      if(level==="medium"){
+        const max=Math.min(35,current);
+        if(max<1)return null;
+        const b=rand(1,max); return {a:current,b,sign:"−",type,result:current-b};
+      }
+      const max=Math.min(80,current);
+      if(max<1)return null;
+      const b=rand(1,max); return {a:current,b,sign:"−",type,result:current-b};
+    }
+
+    if(type==="*"){
+      if(level==="initial"){
+        // Easy multiplication: tables 2-5, keeping numbers manageable.
+        if(current>=1 && current<=10){
+          const b=rand(2,5), result=current*b;
+          if(result<=60)return {a:current,b,sign:"×",type,result};
+        }
+        const a=rand(2,10), b=rand(2,5);
+        return {a,b,sign:"×",type,result:a*b,breakChain:true};
+      }
+      if(level==="medium"){
+        // Multiplication strictly from standard tables 1-10.
+        const a=(current>=1 && current<=10)?current:rand(2,10);
+        const b=rand(2,10);
+        return {a,b,sign:"×",type,result:a*b,breakChain:a!==current};
+      }
+      // Advanced: at least one factor may exceed 10; result <= 100.
+      const pairs=[];
+      for(let a=2;a<=25;a++)for(let b=2;b<=25;b++){
+        if(a*b<=100 && (a>10 || b>10)) pairs.push([a,b]);
+      }
+      const compatible=pairs.filter(([a])=>a===current);
+      const [a,b]=choice(compatible.length?compatible:pairs);
+      return {a,b,sign:"×",type,result:a*b,breakChain:a!==current};
+    }
+
+    if(type==="/"){
+      // Division is always the inverse of a table multiplication: dividend = quotient × divisor,
+      // both quotient and divisor are 1..10, so no remainder or decimals.
+      const tableFacts=[];
+      for(let q=1;q<=10;q++)for(let d=2;d<=10;d++)tableFacts.push([q*d,d,q]);
+      const compatible=tableFacts.filter(([dividend])=>dividend===current);
+      const [a,b,q]=choice(compatible.length?compatible:tableFacts);
+      return {a,b,sign:"÷",type,result:q,breakChain:a!==current};
+    }
+    return null;
+  }
+
+  function buildChain(level){
+    // We regenerate the whole chain if an operation can't naturally use the previous result.
+    // For × and ÷, "breakChain" would violate chaining, so retry until the whole plan chains.
+    for(let attempt=0;attempt<300;attempt++){
+      const plan=makePlan(level);
+      let current=initialStart();
+      const ops=[];
+      let ok=true;
+      for(const type of plan){
+        const op=makeOperation(current,type,level);
+        if(!op || op.breakChain){ok=false;break}
+        ops.push(op); current=op.result;
+        if(current<0 || current>180){ok=false;break}
+      }
+      if(ok){
+        // Medio y avanzado deben incluir al menos un resultado superior a 50.
+        if((level==="medium" || level==="advanced") && !ops.some(o=>o.result>50)) continue;
+        // En avanzado, al menos una multiplicación debe quedar fuera de las tablas 1-10.
+        if(level==="advanced" && !ops.some(o=>o.type==="*" && (o.a>10 || o.b>10))) continue;
+        return ops;
+      }
+    }
+
+    // Reliable fallback chains, still randomized by starting variants.
+    if(level==="initial"){
+      const a=rand(2,5);
+      return [
+        {a,b:rand(1,5),sign:"+",type:"+",result:null},
+      ].map(()=>null) && fallbackInitial(a);
+    }
+    if(level==="medium") return fallbackMedium();
+    return fallbackAdvanced();
+  }
+
+  function fallbackInitial(a){
+    const o1={a,b:2,sign:"×",type:"*",result:a*2};
+    const o2={a:o1.result,b:3,sign:"+",type:"+",result:o1.result+3};
+    const o3={a:o2.result,b:2,sign:"−",type:"-",result:o2.result-2};
+    const o4={a:o3.result,b:2,sign:"+",type:"+",result:o3.result+2};
+    const o5={a:o4.result,b:1,sign:"−",type:"-",result:o4.result-1};
+    const o6={a:o5.result,b:2,sign:"+",type:"+",result:o5.result+2};
+    return [o1,o2,o3,o4,o5,o6];
+  }
+
+  function fallbackMedium(){
+    // 6×8=48, +12=60, ÷6=10, ×7=70, -18=52, +9=61
+    return [
+      {a:6,b:8,sign:"×",type:"*",result:48},
+      {a:48,b:12,sign:"+",type:"+",result:60},
+      {a:60,b:6,sign:"÷",type:"/",result:10},
+      {a:10,b:7,sign:"×",type:"*",result:70},
+      {a:70,b:18,sign:"−",type:"-",result:52},
+      {a:52,b:9,sign:"+",type:"+",result:61}
+    ];
+  }
+
+  function fallbackAdvanced(){
+    // Includes non-table multiplication 4×13=52 and exact table division 60÷6=10.
+    return [
+      {a:4,b:13,sign:"×",type:"*",result:52},
+      {a:52,b:8,sign:"+",type:"+",result:60},
+      {a:60,b:6,sign:"÷",type:"/",result:10},
+      {a:10,b:9,sign:"×",type:"*",result:90},
+      {a:90,b:37,sign:"−",type:"-",result:53},
+      {a:53,b:29,sign:"+",type:"+",result:82}
+    ];
+  }
+
+  function distractors(op){
+    const correct=op.result, set=new Set([correct]), candidates=[];
+    for(let d=1;d<=6;d++){candidates.push(correct-d,correct+d)}
+    if(op.type==="*"){
+      candidates.push(op.a*(op.b-1),op.a*(op.b+1),(op.a-1)*op.b,(op.a+1)*op.b);
+    }
+    if(op.type==="/"){
+      candidates.push(correct-1,correct+1,correct+2,correct-2,op.a-op.b);
+    }
+    if(op.type==="+"||op.type==="-"){
+      candidates.push(op.a+op.b,Math.abs(op.a-op.b),correct+10,correct-10);
+    }
+    for(const c of shuffle(candidates)){
+      if(Number.isInteger(c)&&c>=0&&c<=200&&c!==correct)set.add(c);
+      if(set.size===6)break;
+    }
+    while(set.size<6){
+      const c=Math.max(0,correct+rand(-15,15));
+      if(c!==correct)set.add(c);
+    }
+    return shuffle([...set]);
+  }
+
+  function startGame(){
+    cancelAnimationFrame(raf);
+    const ops=buildChain(selectedLevel);
+    state={level:selectedLevel,ops,step:0,errors:0,start:performance.now(),running:true};
+    errorsTopEl.textContent="0";
+    failsEl.textContent="0";
+    $("#levelName").textContent=levels[selectedLevel].name;
+    $("#miniDot").style.background=levels[selectedLevel].color;
+    show(playScreen);
+    renderStep();
+    tick();
+  }
+
+  function renderProgress(){
+    progressEl.innerHTML="";
+    for(let i=0;i<TOTAL;i++){
+      const x=document.createElement("div");
+      x.className="step";
+      if(i<state.step)x.classList.add("done");
+      if(i===state.step&&state.running)x.classList.add("active");
+      progressEl.appendChild(x);
+    }
+  }
+
+  function renderStep(){
+    renderProgress();
+    if(state.step>=TOTAL){finish();return}
+    const op=state.ops[state.step];
+    $("#stepTitle").textContent=`OPERACIÓN ${state.step+1} DE ${TOTAL}`;
+    equationEl.textContent=`${op.a} ${op.sign} ${op.b}`;
+    answersEl.innerHTML="";
+    distractors(op).forEach((v,i)=>{
+      const b=document.createElement("button");
+      b.className="answer"; b.textContent=v;
+      b.setAttribute("aria-label",`Respuesta ${i+1}: ${v}`);
+      b.addEventListener("click",()=>answer(v,b));
+      answersEl.appendChild(b);
+    });
+  }
+
+  function answer(v,btn){
+    if(!state?.running)return;
+    const op=state.ops[state.step];
+    if(v===op.result){
+      [...answersEl.children].forEach(x=>x.disabled=true);
+      btn.classList.add("correct");
+      state.step++;
+      renderProgress();
+      setTimeout(renderStep,160);
+    }else{
+      state.errors++;
+      failsEl.textContent=state.errors;
+      errorsTopEl.textContent=state.errors;
+      btn.classList.add("wrong");
+      penaltyEl.classList.add("show");
+      setTimeout(()=>btn.classList.remove("wrong"),230);
+      setTimeout(()=>penaltyEl.classList.remove("show"),650);
+    }
+  }
+
+  function tick(){
+    if(!state?.running)return;
+    timerEl.textContent=fmt((performance.now()-state.start)/1000);
+    raf=requestAnimationFrame(tick);
+  }
+
+  function finish(){
+    state.running=false; cancelAnimationFrame(raf);
+    const real=(performance.now()-state.start)/1000;
+    const total=real+state.errors*PENALTY;
+    state.real=real; state.total=total;
+
+    $("#finalScore").textContent=fmt(total);
+    $("#realTime").textContent=fmt(real);
+    $("#errorCount").textContent=state.errors;
+    $("#penaltyTime").textContent=`+${state.errors*PENALTY} s`;
+
+    const old=bestFor(state.level);
+    const record=!old||total<old.time;
+    $("#recordLine").textContent=record?"🏆 ¡Has fet el rècord!":`Rècord de ${levels[state.level].name}: ${fmt(old.time)}`;
+
+    show(resultScreen);
+
+    if(record){
+      pendingRecord={level:state.level,time:total};
+      $("#playerName").value="";
+      $("#recordModal").classList.add("show");
+      setTimeout(()=>$("#playerName").focus(),50);
+    }
+  }
+
+  function saveRecord(){
+    if(!pendingRecord)return;
+    const name=$("#playerName").value.trim()||"Anònim";
+    const records=getRecords();
+    records[pendingRecord.level]={name,time:pendingRecord.time,date:new Date().toISOString()};
+    setRecords(records);
+    pendingRecord=null;
+    $("#recordModal").classList.remove("show");
+    renderRecords();
+    $("#recordLine").textContent="🏆 Rècord guardat en este navegador";
+  }
+
+  function home(){
+    cancelAnimationFrame(raf);
+    state=null; pendingRecord=null;
+    errorsTopEl.textContent="0"; failsEl.textContent="0"; timerEl.textContent="0,0 s";
+    equationEl.textContent=""; answersEl.innerHTML=""; progressEl.innerHTML="";
+    penaltyEl.classList.remove("show");
+    renderRecords();
+    show(startScreen);
+  }
+
+  $("#startBtn").addEventListener("click",startGame);
+  $("#againBtn").addEventListener("click",startGame);
+  $("#homeBtn").addEventListener("click",home);
+  $("#saveRecordBtn").addEventListener("click",saveRecord);
+  $("#playerName").addEventListener("keydown",e=>{if(e.key==="Enter")saveRecord()});
+
+  window.addEventListener("keydown",e=>{
+    if(!state?.running)return;
+    const n=Number(e.key);
+    if(n>=1&&n<=6){
+      const b=answersEl.children[n-1];
+      if(b)b.click();
+    }
+  });
+
+  setLevel("medium");
+})();
+</script>
+
+<footer class="footer">
+  <span>Fet amb ❤️ des de Carlet</span>
+  <span>&copy; Raquel &amp; Javi, 2026</span>
+</footer>
+
+</body>
+</html>

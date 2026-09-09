@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>6 al Sprint — 2 jugadors</title>
+<style>
+:root{
+  --bg:#f4f7fb; --panel:#fff; --text:#172033; --muted:#6d7687; --line:#dfe5ef;
+  --accent:#3157d5; --accent2:#2442ac; --ok:#159447; --bad:#d33a3a;
+  --green:#3fbd68; --yellow:#f2c344; --red:#e85656;
+  --shadow:0 16px 48px rgba(31,48,85,.11);
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;width:100%;height:100%;overflow:hidden;
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  color:var(--text);background:var(--bg)
+}
+body{display:flex;align-items:center;justify-content:center}
+button,input{font:inherit}
+button{touch-action:manipulation}
+.app{
+  width:100vw;height:100dvh;background:var(--panel);overflow:hidden;
+  display:grid;grid-template-rows:auto 1fr;
+}
+header{
+  min-height:76px;padding:13px 28px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:20px;background:#fff;
+}
+.brand{display:flex;align-items:center;gap:13px}
+.logo{
+  width:48px;height:48px;border-radius:14px;background:var(--accent);color:#fff;
+  display:grid;place-items:center;font-size:20px;font-weight:950
+}
+h1{margin:0;font-size:clamp(23px,2vw,32px);line-height:1}
+.sub{font-size:13px;color:var(--muted);margin-top:4px}
+.shared-head{display:flex;align-items:center;gap:14px}
+.level-indicator{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:900}
+.mini-dot{width:16px;height:16px;border-radius:50%}
+.master-timer{
+  min-width:150px;text-align:right;font-size:clamp(27px,2.4vw,38px);
+  font-weight:950;font-variant-numeric:tabular-nums
+}
+
+main{min-height:0;position:relative}
+.screen{position:absolute;inset:0;display:none}
+.screen.active{display:block}
+
+/* MENU */
+.menu{
+  overflow:hidden;
+  padding:clamp(22px,3vh,38px) clamp(24px,4vw,64px);
+}
+.menu-inner{height:100%;max-width:1050px;margin:0 auto;text-align:center;display:flex;flex-direction:column;justify-content:center}
+.menu h2{margin:0 0 10px;font-size:clamp(42px,5.5vw,76px);line-height:.92}
+.menu .lead{
+  margin:0 auto 22px;max-width:800px;color:var(--muted);
+  font-size:clamp(16px,1.4vw,20px);line-height:1.45
+}
+.instructions{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0 22px}
+.instruction{
+  border:1px solid var(--line);border-radius:18px;padding:16px 18px;
+  background:#fbfcff;text-align:left
+}
+.instruction strong{display:block;margin-bottom:5px;font-size:15px}
+.instruction span{font-size:13px;color:var(--muted);line-height:1.4}
+.difficulty-title{
+  font-size:12px;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--muted);font-weight:900;margin:2px 0 12px
+}
+.difficulty{display:flex;justify-content:center;gap:28px;margin-bottom:18px}
+.level-dot{
+  width:48px;height:48px;border:5px solid transparent;border-radius:50%;
+  cursor:pointer;box-shadow:0 0 0 2px var(--line);transition:.15s
+}
+.level-dot:hover{transform:scale(1.06)}
+.level-dot.active{box-shadow:0 0 0 4px var(--text)}
+.level-dot.green{background:var(--green)}
+.level-dot.yellow{background:var(--yellow)}
+.level-dot.red{background:var(--red)}
+.cta{
+  border:0;border-radius:18px;padding:15px 30px;background:var(--accent);color:#fff;
+  font-size:18px;font-weight:950;cursor:pointer;min-width:250px;
+  box-shadow:0 10px 26px rgba(49,87,213,.23)
+}
+.cta:hover{background:var(--accent2)}
+.cta:active{transform:translateY(1px)}
+.records{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+.records-title{font-size:13px;font-weight:900;color:var(--muted);margin-bottom:9px}
+.record-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:720px;margin:0 auto}
+.record-item{
+  min-width:0;border:1px solid var(--line);border-radius:13px;padding:9px 10px;
+  display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px
+}
+.record-dot{width:13px;height:13px;border-radius:50%;flex:0 0 auto}
+.record-item strong{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.record-item .time{color:var(--accent);font-weight:950;white-space:nowrap}
+
+/* GAME */
+.game-screen.active{display:grid;grid-template-rows:auto 1fr}
+.game-toolbar{
+  min-height:58px;padding:8px 26px;border-bottom:1px solid var(--line);
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;background:#fbfcff
+}
+.player-toolbar{font-weight:950;font-size:15px}
+.player-toolbar.right{text-align:right}
+.player-toolbar span{color:var(--bad)}
+.toolbar-timer{
+  text-align:center;font-size:clamp(28px,2.2vw,38px);font-weight:950;
+  font-variant-numeric:tabular-nums
+}
+.boards{
+  min-height:0;display:grid;grid-template-columns:1fr 1fr;
+}
+.board{
+  min-width:0;min-height:0;padding:clamp(14px,1.7vw,28px);
+  display:grid;grid-template-rows:auto auto 1fr auto;gap:12px;
+  align-content:stretch;position:relative;background:#fff
+}
+.board:first-child{border-right:2px solid var(--line)}
+.player-title{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  font-size:clamp(18px,1.5vw,24px);font-weight:950
+}
+.player-title .status{font-size:12px;color:var(--muted);font-weight:850}
+.progress{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
+.step{height:8px;border-radius:99px;background:#e8edf5}
+.step.active{background:var(--accent)}
+.step.done{background:var(--ok)}
+.equation-card{
+  min-height:0;border:1px solid var(--line);border-radius:24px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:20px;background:#fff;box-shadow:0 10px 30px rgba(28,44,78,.06)
+}
+.step-title{
+  font-size:11px;letter-spacing:.1em;color:var(--muted);font-weight:900;margin-bottom:12px
+}
+.equation{
+  font-size:clamp(58px,5.4vw,94px);font-weight:950;letter-spacing:-.045em;
+  line-height:.95;font-variant-numeric:tabular-nums;text-align:center
+}
+.answers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.answer{
+  min-height:76px;border:2px solid var(--line);border-radius:18px;background:#fff;
+  font-size:clamp(28px,2.8vw,44px);font-weight:950;cursor:pointer;
+  transition:.12s ease
+}
+.answer:hover{border-color:#b6c1da;transform:translateY(-1px)}
+.answer:active{transform:scale(.985)}
+.answer.correct{background:#eaf8ef;border-color:var(--ok);color:#0d7d38}
+.answer.wrong{background:#fff0f0;border-color:var(--bad);color:var(--bad);animation:shake .2s linear}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.penalty{
+  position:absolute;right:24px;top:18px;color:var(--bad);font-weight:950;
+  opacity:0;transform:translateY(4px);transition:.18s
+}
+.penalty.show{opacity:1;transform:translateY(0)}
+.finished-overlay{
+  position:absolute;inset:0;background:rgba(255,255,255,.96);
+  display:none;align-items:center;justify-content:center;text-align:center;padding:30px;z-index:5
+}
+.board.finished .finished-overlay{display:flex}
+.finished-card h3{font-size:clamp(30px,3vw,46px);margin:0 0 8px}
+.finished-time{font-size:clamp(50px,5vw,78px);font-weight:950;color:var(--accent)}
+.finished-meta{margin-top:10px;color:var(--muted);font-weight:800;line-height:1.6}
+
+/* RESULT */
+.result-screen{padding:clamp(24px,4vh,48px) clamp(26px,5vw,80px);overflow:hidden}
+.result-inner{height:100%;max-width:1200px;margin:0 auto;display:flex;flex-direction:column;justify-content:center;text-align:center}
+.result-screen h2{font-size:clamp(38px,5vw,66px);margin:0 0 8px}
+.winner{min-height:30px;color:var(--ok);font-weight:950;font-size:clamp(17px,1.8vw,23px);margin-bottom:18px}
+.result-cards{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.result-card{
+  border:1px solid var(--line);border-radius:24px;padding:22px;background:#fbfcff
+}
+.result-card h3{margin:0 0 10px;font-size:22px}
+.result-score{font-size:clamp(45px,5vw,72px);font-weight:950;color:var(--accent)}
+.result-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.result-meta div{border:1px solid var(--line);border-radius:13px;padding:10px;background:white}
+.result-meta strong{display:block;font-size:20px}
+.result-meta span{font-size:11px;color:var(--muted);font-weight:850}
+.actions{display:flex;gap:12px;justify-content:center;margin-top:22px}
+.secondary{
+  border:1px solid var(--line);border-radius:18px;padding:14px 24px;background:#fff;
+  font-weight:900;cursor:pointer
+}
+
+/* MODAL */
+.modal{
+  position:fixed;inset:0;background:rgba(18,26,44,.58);display:none;
+  align-items:center;justify-content:center;padding:20px;z-index:30
+}
+.modal.show{display:flex}
+.modal-card{
+  width:min(430px,100%);background:#fff;border-radius:24px;padding:26px;
+  text-align:center;box-shadow:0 22px 65px rgba(0,0,0,.24)
+}
+.modal-card h3{font-size:28px;margin:0 0 8px}
+.modal-card p{color:var(--muted);line-height:1.45;margin:0 0 16px}
+.modal-card input{
+  width:100%;border:2px solid var(--line);border-radius:15px;padding:14px;
+  font-size:18px;outline:none;margin-bottom:12px
+}
+.modal-card input:focus{border-color:var(--accent)}
+
+@media(max-width:900px){
+  html,body{overflow:auto;height:auto}
+  .app{height:auto;min-height:100dvh}
+  .screen{position:relative;inset:auto}
+  .menu{min-height:calc(100dvh - 76px)}
+  .boards{grid-template-columns:1fr}
+  .board:first-child{border-right:0;border-bottom:2px solid var(--line)}
+  .board{min-height:650px}
+  .game-screen.active{display:block}
+  .instructions{grid-template-columns:1fr}
+  .result-cards{grid-template-columns:1fr}
+}
+.footer{
+  position:fixed;
+  left:0;
+  bottom:8px;
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 14px;
+  font-size:11px;
+  color:#8a93a3;
+  pointer-events:none;
+  z-index:100;
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo">6×</div>
+      <div>
+        <h1>6 al Sprint — 2 jugadors</h1>
+        <div class="sub">Sis operacions encadenades contra el rellotge</div>
+      </div>
+    </div>
+    <div class="shared-head">
+      <div class="level-indicator" id="headerLevel" style="visibility:hidden">
+        <span class="mini-dot" id="headerDot"></span>
+      </div>
+      <div class="master-timer" id="headerTimer" style="visibility:hidden">0,0 s</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="screen menu active" id="menuScreen">
+      <div class="menu-inner">
+        <h2>6 al Sprint</h2>
+        <p class="lead">
+          Dos jugadors competeixen a la vegada. Cadascú rep sis operacions encadenades diferents.
+        </p>
+
+        <div class="instructions">
+          <div class="instruction"><strong>Dos taulers independents</strong><span>Cada jugador toca únicament les seues respostes.</span></div>
+          <div class="instruction"><strong>Un sol cronòmetre</strong><span>Els dos comencen exactament al mateix temps i es registra quan acaba cadascú.</span></div>
+          <div class="instruction"><strong>+3 segundos per errada</strong><span>La penalització s'aplica de forma independent a cada jugador.</span></div>
+        </div>
+
+        <div class="difficulty-title">Tria dificultat</div>
+        <div class="difficulty" role="radiogroup" aria-label="Dificultat">
+          <button class="level-dot green" data-level="initial" aria-label="Nivell inicial"></button>
+          <button class="level-dot yellow active" data-level="medium" aria-label="Nivell mitjà"></button>
+          <button class="level-dot red" data-level="advanced" aria-label="Nivell avançat"></button>
+        </div>
+
+        <div><button class="cta" id="startBtn">Començar sprint</button></div>
+
+        <div class="records">
+          <div class="records-title">Rècords</div>
+          <div class="record-list" id="recordList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen game-screen" id="gameScreen">
+      <div class="game-toolbar">
+        <div class="player-toolbar">Jugador 1 · Errades: <span id="fails1">0</span></div>
+        <div class="toolbar-timer" id="masterTimer">0,0 s</div>
+        <div class="player-toolbar right">Jugador 2 · Errades: <span id="fails2">0</span></div>
+      </div>
+
+      <div class="boards">
+        <article class="board" id="board1">
+          <div class="player-title">
+            <span>Jugador 1</span><span class="status" id="status1">En carrera</span>
+          </div>
+          <div class="progress" id="progress1"></div>
+          <div class="equation-card">
+            <div class="step-title" id="stepTitle1">OPERACIÓ 1 DE 6</div>
+            <div class="equation" id="equation1"></div>
+          </div>
+          <div class="answers" id="answers1"></div>
+          <div class="penalty" id="penalty1">+3 s</div>
+          <div class="finished-overlay">
+            <div class="finished-card">
+              <h3>¡Finalitzat!</h3>
+              <div class="finished-time" id="finishScore1">0,0 s</div>
+              <div class="finished-meta" id="finishMeta1"></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="board" id="board2">
+          <div class="player-title">
+            <span>Jugador 2</span><span class="status" id="status2">En carrera</span>
+          </div>
+          <div class="progress" id="progress2"></div>
+          <div class="equation-card">
+            <div class="step-title" id="stepTitle2">OPERACIÓ 1 DE 6</div>
+            <div class="equation" id="equation2"></div>
+          </div>
+          <div class="answers" id="answers2"></div>
+          <div class="penalty" id="penalty2">+3 s</div>
+          <div class="finished-overlay">
+            <div class="finished-card">
+              <h3>¡Finalitzat!</h3>
+              <div class="finished-time" id="finishScore2">0,0 s</div>
+              <div class="finished-meta" id="finishMeta2"></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="screen result-screen" id="resultScreen">
+      <div class="result-inner">
+        <h2>Sprint complet</h2>
+        <div class="winner" id="winnerLine"></div>
+
+        <div class="result-cards">
+          <div class="result-card">
+            <h3>Jugador 1</h3>
+            <div class="result-score" id="resultScore1">0,0 s</div>
+            <div class="result-meta">
+              <div><strong id="real1">0,0 s</strong><span>TEMPS REAL</span></div>
+              <div><strong id="err1">0</strong><span>ERRADES</span></div>
+              <div><strong id="pen1">+0 s</strong><span>PENALITZACIÓ</span></div>
+            </div>
+          </div>
+          <div class="result-card">
+            <h3>Jugador 2</h3>
+            <div class="result-score" id="resultScore2">0,0 s</div>
+            <div class="result-meta">
+              <div><strong id="real2">0,0 s</strong><span>TEMPS REAL</span></div>
+              <div><strong id="err2">0</strong><span>ERRADES</span></div>
+              <div><strong id="pen2">+0 s</strong><span>PENALITZACIÓ</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="cta" id="againBtn">Altra partida</button>
+          <button class="secondary" id="homeBtn">Inici</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="recordModal" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <h3>🏆 ¡Nou rècord!</h3>
+    <p id="recordText">S'ha aconseguit la millor marca d'este nivell. Escriu el nom per a guardar-la en este navegador.</p>
+    <input id="playerName" maxlength="24" placeholder="Nombre">
+    <button class="cta" id="saveRecordBtn">Guardar rècord</button>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+const TOTAL=6, PENALTY=3, STORAGE_KEY="6alSprint.duo.records.v1";
+const levels={
+  initial:{name:"Inicial",color:"#3fbd68"},
+  medium:{name:"Mitjà",color:"#f2c344"},
+  advanced:{name:"Avançat",color:"#e85656"}
+};
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const fmt=n=>n.toFixed(1).replace(".",",")+" s";
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const choice=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+let selectedLevel="medium", game=null, raf=null, pendingRecord=null;
+
+function show(id){
+  $$(".screen").forEach(s=>s.classList.remove("active"));
+  $(id).classList.add("active");
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function getRecords(){
+  try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}")||{}}catch{return{}}
+}
+function bestFor(level){
+  const r=getRecords()[level];
+  return r&&Number.isFinite(r.time)?r:null;
+}
+function renderRecords(){
+  const r=getRecords(), list=$("#recordList");
+  list.innerHTML="";
+  ["initial","medium","advanced"].forEach(level=>{
+    const x=r[level], item=document.createElement("div");
+    item.className="record-item";
+    item.innerHTML=x
+      ? `<span class="record-dot" style="background:${levels[level].color}"></span><strong>${escapeHtml(x.name)}</strong><span class="time">${fmt(x.time)}</span>`
+      : `<span class="record-dot" style="background:${levels[level].color}"></span><span class="time">—</span>`;
+    list.appendChild(item);
+  });
+}
+function setLevel(level){
+  selectedLevel=level;
+  $$(".level-dot").forEach(b=>b.classList.toggle("active",b.dataset.level===level));
+}
+$$(".level-dot").forEach(b=>b.addEventListener("click",()=>setLevel(b.dataset.level)));
+
+function makePlan(level){
+  const required=level==="initial"?["+","-","*"]:["+","-","*","/"];
+  const allowed=level==="initial"?["+","-","*"]:["+","-","*","/"];
+  while(required.length<TOTAL) required.push(choice(allowed));
+  return shuffle(required);
+}
+function initialStart(level){
+  if(level==="initial")return rand(3,12);
+  if(level==="medium")return rand(4,20);
+  return rand(8,35);
+}
+function makeOperation(current,type,level){
+  if(type==="+"){
+    if(level==="initial"){const b=rand(1,10);return{a:current,b,sign:"+",type,result:current+b}}
+    if(level==="medium"){const b=rand(5,30);return{a:current,b,sign:"+",type,result:current+b}}
+    const b=rand(18,75);return{a:current,b,sign:"+",type,result:current+b}
+  }
+  if(type==="-"){
+    if(current<=1)return null;
+    const max=level==="initial"?Math.min(10,current):level==="medium"?Math.min(35,current):Math.min(80,current);
+    if(max<1)return null;
+    const b=rand(1,max);return{a:current,b,sign:"−",type,result:current-b}
+  }
+  if(type==="*"){
+    if(level==="initial"){
+      if(current>=1&&current<=10){
+        const b=rand(2,5),result=current*b;
+        if(result<=60)return{a:current,b,sign:"×",type,result}
+      }
+      return null;
+    }
+    if(level==="medium"){
+      if(current>=1&&current<=10){
+        const b=rand(2,10);return{a:current,b,sign:"×",type,result:current*b}
+      }
+      return null;
+    }
+    const bs=[];
+    for(let b=2;b<=25;b++)if(current*b<=100&&(current>10||b>10))bs.push(b);
+    if(!bs.length)return null;
+    const b=choice(bs);return{a:current,b,sign:"×",type,result:current*b}
+  }
+  if(type==="/"){
+    const divisors=[];
+    for(let d=2;d<=10;d++){
+      const q=current/d;
+      if(Number.isInteger(q)&&q>=1&&q<=10)divisors.push(d);
+    }
+    if(!divisors.length)return null;
+    const b=choice(divisors);return{a:current,b,sign:"÷",type,result:current/b}
+  }
+  return null;
+}
+function buildChain(level){
+  for(let attempt=0;attempt<600;attempt++){
+    const plan=makePlan(level);
+    let current=initialStart(level), ops=[],ok=true;
+    for(const type of plan){
+      const op=makeOperation(current,type,level);
+      if(!op){ok=false;break}
+      ops.push(op);current=op.result;
+      if(current<0||current>180){ok=false;break}
+    }
+    if(!ok)continue;
+    if((level==="medium"||level==="advanced")&&!ops.some(o=>o.result>50))continue;
+    if(level==="advanced"&&!ops.some(o=>o.type==="*"&&(o.a>10||o.b>10)))continue;
+    return ops;
+  }
+  if(level==="initial")return fallbackInitial();
+  if(level==="medium")return fallbackMedium();
+  return fallbackAdvanced();
+}
+function fallbackInitial(){
+  return[
+    {a:4,b:3,sign:"×",type:"*",result:12},
+    {a:12,b:5,sign:"+",type:"+",result:17},
+    {a:17,b:6,sign:"−",type:"-",result:11},
+    {a:11,b:4,sign:"+",type:"+",result:15},
+    {a:15,b:5,sign:"−",type:"-",result:10},
+    {a:10,b:2,sign:"×",type:"*",result:20}
+  ];
+}
+function fallbackMedium(){
+  return[
+    {a:6,b:8,sign:"×",type:"*",result:48},
+    {a:48,b:12,sign:"+",type:"+",result:60},
+    {a:60,b:6,sign:"÷",type:"/",result:10},
+    {a:10,b:7,sign:"×",type:"*",result:70},
+    {a:70,b:18,sign:"−",type:"-",result:52},
+    {a:52,b:9,sign:"+",type:"+",result:61}
+  ];
+}
+function fallbackAdvanced(){
+  return[
+    {a:4,b:13,sign:"×",type:"*",result:52},
+    {a:52,b:8,sign:"+",type:"+",result:60},
+    {a:60,b:6,sign:"÷",type:"/",result:10},
+    {a:10,b:9,sign:"×",type:"*",result:90},
+    {a:90,b:37,sign:"−",type:"-",result:53},
+    {a:53,b:29,sign:"+",type:"+",result:82}
+  ];
+}
+function signature(ops){return ops.map(o=>`${o.a}${o.sign}${o.b}=${o.result}`).join("|")}
+
+function distractors(op){
+  const correct=op.result,set=new Set([correct]),c=[];
+  for(let d=1;d<=6;d++){c.push(correct-d,correct+d)}
+  if(op.type==="*")c.push(op.a*(op.b-1),op.a*(op.b+1),(op.a-1)*op.b,(op.a+1)*op.b);
+  if(op.type==="/")c.push(correct-1,correct+1,correct+2,correct-2,op.a-op.b);
+  if(op.type==="+"||op.type==="-")c.push(op.a+op.b,Math.abs(op.a-op.b),correct+10,correct-10);
+  for(const v of shuffle(c)){
+    if(Number.isInteger(v)&&v>=0&&v<=200&&v!==correct)set.add(v);
+    if(set.size===6)break;
+  }
+  while(set.size<6){
+    const v=Math.max(0,correct+rand(-15,15));
+    if(v!==correct)set.add(v);
+  }
+  return shuffle([...set]);
+}
+
+function newPlayer(ops){return{ops,step:0,errors:0,done:false,real:null,total:null}}
+
+function startGame(){
+  cancelAnimationFrame(raf);
+  let ops1=buildChain(selectedLevel),ops2=buildChain(selectedLevel);
+  for(let i=0;i<30&&signature(ops2)===signature(ops1);i++)ops2=buildChain(selectedLevel);
+
+  game={
+    level:selectedLevel,start:performance.now(),running:true,
+    players:[newPlayer(ops1),newPlayer(ops2)]
+  };
+
+  $("#fails1").textContent="0";$("#fails2").textContent="0";
+  $("#board1").classList.remove("finished");$("#board2").classList.remove("finished");
+  $("#status1").textContent="En carrera";$("#status2").textContent="En carrera";
+  $("#masterTimer").textContent="0,0 s";$("#headerTimer").textContent="0,0 s";
+  $("#headerTimer").style.visibility="visible";$("#headerLevel").style.visibility="visible";
+  $("#headerDot").style.background=levels[selectedLevel].color;
+
+  show("#gameScreen");
+  renderPlayer(0);renderPlayer(1);tick();
+}
+
+function renderProgress(i){
+  const p=game.players[i],el=$("#progress"+(i+1));
+  el.innerHTML="";
+  for(let n=0;n<TOTAL;n++){
+    const s=document.createElement("div");s.className="step";
+    if(n<p.step)s.classList.add("done");
+    else if(n===p.step&&!p.done)s.classList.add("active");
+    el.appendChild(s);
+  }
+}
+function renderPlayer(i){
+  const p=game.players[i],num=i+1;
+  renderProgress(i);
+  if(p.done)return;
+  const op=p.ops[p.step];
+  $("#stepTitle"+num).textContent=`OPERACIÓN ${p.step+1} DE ${TOTAL}`;
+  $("#equation"+num).textContent=`${op.a} ${op.sign} ${op.b}`;
+  const box=$("#answers"+num);box.innerHTML="";
+  distractors(op).forEach(v=>{
+    const b=document.createElement("button");
+    b.className="answer";b.textContent=v;
+    b.addEventListener("click",()=>answer(i,v,b));
+    box.appendChild(b);
+  });
+}
+function answer(i,v,btn){
+  if(!game?.running)return;
+  const p=game.players[i];
+  if(p.done)return;
+  const op=p.ops[p.step],num=i+1;
+
+  if(v===op.result){
+    [...$("#answers"+num).children].forEach(x=>x.disabled=true);
+    btn.classList.add("correct");
+    p.step++;
+    renderProgress(i);
+    if(p.step>=TOTAL){
+      setTimeout(()=>finishPlayer(i),120);
+    }else{
+      setTimeout(()=>renderPlayer(i),140);
+    }
+  }else{
+    p.errors++;
+    $("#fails"+num).textContent=p.errors;
+    btn.classList.add("wrong");
+    const pen=$("#penalty"+num);pen.classList.add("show");
+    setTimeout(()=>btn.classList.remove("wrong"),220);
+    setTimeout(()=>pen.classList.remove("show"),600);
+  }
+}
+function finishPlayer(i){
+  const p=game.players[i];
+  if(p.done)return;
+  p.done=true;
+  p.real=(performance.now()-game.start)/1000;
+  p.total=p.real+p.errors*PENALTY;
+  const num=i+1;
+  $("#board"+num).classList.add("finished");
+  $("#status"+num).textContent="Finalitzat";
+  $("#finishScore"+num).textContent=fmt(p.total);
+  $("#finishMeta"+num).innerHTML=`Tiempo real: <b>${fmt(p.real)}</b><br>Errades: <b>${p.errors}</b> · Penalització: <b>+${p.errors*PENALTY} s</b>`;
+  if(game.players.every(x=>x.done))setTimeout(finishGame,350);
+}
+function tick(){
+  if(!game?.running)return;
+  const t=(performance.now()-game.start)/1000;
+  $("#masterTimer").textContent=fmt(t);
+  $("#headerTimer").textContent=fmt(t);
+  raf=requestAnimationFrame(tick);
+}
+function finishGame(){
+  game.running=false;cancelAnimationFrame(raf);
+  const [a,b]=game.players;
+
+  [a,b].forEach((p,i)=>{
+    const n=i+1;
+    $("#resultScore"+n).textContent=fmt(p.total);
+    $("#real"+n).textContent=fmt(p.real);
+    $("#err"+n).textContent=p.errors;
+    $("#pen"+n).textContent=`+${p.errors*PENALTY} s`;
+  });
+
+  if(Math.abs(a.total-b.total)<0.05)$("#winnerLine").textContent="🤝 Empat";
+  else $("#winnerLine").textContent=(a.total<b.total?"🏆 Guanya Jugador 1":"🏆 Guanya Jugador 2");
+
+  $("#headerTimer").style.visibility="hidden";
+  $("#headerLevel").style.visibility="hidden";
+  show("#resultScreen");
+
+  const winner=a.total<=b.total?a:b;
+  const old=bestFor(game.level);
+  if(!old||winner.total<old.time){
+    pendingRecord={level:game.level,time:winner.total};
+    $("#recordText").textContent="S'ha aconseguit la millor marca d'este nivell. Escriu el nom del jugador per guardar-la en este navegador.";
+    $("#playerName").value="";
+    $("#recordModal").classList.add("show");
+    setTimeout(()=>$("#playerName").focus(),50);
+  }
+}
+function saveRecord(){
+  if(!pendingRecord)return;
+  const name=$("#playerName").value.trim()||"Anònim";
+  const records=getRecords();
+  records[pendingRecord.level]={name,time:pendingRecord.time,date:new Date().toISOString()};
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+  pendingRecord=null;
+  $("#recordModal").classList.remove("show");
+  renderRecords();
+}
+function home(){
+  cancelAnimationFrame(raf);game=null;pendingRecord=null;
+  $("#recordModal").classList.remove("show");
+  $("#headerTimer").style.visibility="hidden";$("#headerLevel").style.visibility="hidden";
+  renderRecords();show("#menuScreen");
+}
+
+$("#startBtn").addEventListener("click",startGame);
+$("#againBtn").addEventListener("click",startGame);
+$("#homeBtn").addEventListener("click",home);
+$("#saveRecordBtn").addEventListener("click",saveRecord);
+$("#playerName").addEventListener("keydown",e=>{if(e.key==="Enter")saveRecord()});
+
+setLevel("medium");
+renderRecords();
+})();
+</script>
+
+<footer class="footer">
+  <span>Fet amb ❤️ des de Carlet</span>
+  <span>&copy; Raquel &amp; Javi, 2026</span>
+</footer>
+
+</body>
+</html>

@@ -205,14 +205,24 @@ main{min-height:0;position:relative}
 .modal-card input:focus{border-color:var(--accent)}
 
 @media(max-width:900px){
-  html,body{overflow:auto;height:auto}
-  .app{height:auto;min-height:100dvh}
-  .screen{position:relative;inset:auto}
-  .menu{min-height:calc(100dvh - 76px)}
-  .boards{grid-template-columns:1fr}
-  .board:first-child{border-right:0;border-bottom:2px solid var(--line)}
-  .board{min-height:650px}
-  .game-screen.active{display:block}
+  html,body{overflow:hidden;height:100%}
+  .app{width:100vw;height:100dvh;min-height:0}
+  .screen{position:absolute;inset:0}
+  .menu{min-height:0;overflow:auto}
+  .boards{grid-template-columns:1fr 1fr;min-width:0;min-height:0}
+  .board:first-child{border-right:2px solid var(--line);border-bottom:0}
+  .board{min-width:0;min-height:0;padding:12px 10px;gap:8px}
+  .game-screen.active{display:grid;grid-template-rows:auto 1fr}
+  .game-toolbar{padding:7px 10px;grid-template-columns:1fr auto 1fr}
+  .player-toolbar{font-size:11px}
+  .toolbar-timer{font-size:24px}
+  .player-title{font-size:16px}
+  .progress{gap:3px}
+  .step{height:6px}
+  .equation-card{padding:10px;border-radius:16px}
+  .equation{font-size:clamp(32px,7vw,60px)}
+  .answers{gap:5px}
+  .answer{min-height:52px;border-radius:12px;font-size:clamp(20px,4vw,32px)}
   .instructions{grid-template-columns:1fr}
   .result-cards{grid-template-columns:1fr}
 }
@@ -230,6 +240,27 @@ main{min-height:0;position:relative}
   pointer-events:none;
   z-index:100;
 }
+
+@media(max-width:520px){
+  header{min-height:58px;padding:8px 10px}
+  .logo{width:36px;height:36px;border-radius:10px;font-size:16px}
+  h1{font-size:18px}
+  .sub{font-size:10px}
+  .shared-head{gap:5px}
+  .master-timer{min-width:75px;font-size:20px}
+  .game-toolbar{min-height:45px}
+  .player-toolbar{font-size:9px}
+  .toolbar-timer{font-size:20px}
+  .board{padding:8px 6px;gap:6px}
+  .player-title{font-size:13px}
+  .player-title .status{font-size:9px}
+  .equation-card{border-radius:12px}
+  .step-title{font-size:8px;margin-bottom:5px}
+  .equation{font-size:clamp(26px,8vw,44px)}
+  .answer{min-height:44px;border-radius:9px;font-size:clamp(17px,5vw,25px)}
+  .penalty{right:8px;top:8px;font-size:12px}
+}
+
 </style>
 </head>
 <body>
@@ -261,7 +292,7 @@ main{min-height:0;position:relative}
         <div class="instructions">
           <div class="instruction"><strong>Dos taulers independents</strong><span>Cada jugador toca únicament les seues respostes.</span></div>
           <div class="instruction"><strong>Un sol cronòmetre</strong><span>Els dos comencen exactament al mateix temps i es registra quan acaba cadascú.</span></div>
-          <div class="instruction"><strong>+3 segundos per errada</strong><span>La penalització s'aplica de forma independent a cada jugador.</span></div>
+          <div class="instruction"><strong>+3 segons per errada</strong><span>La penalització s'aplica de forma independent a cada jugador.</span></div>
         </div>
 
         <div class="difficulty-title">Tria dificultat</div>
